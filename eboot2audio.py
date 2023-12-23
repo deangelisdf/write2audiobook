@@ -66,9 +66,9 @@ def get_text_from_chapter(root_tree:etree.ElementBase, idref:str, content_dir_pa
                 text_chapther += text
             text_chapther += "\n"
     return text_chapther, metadata
-def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Dict[str,str], chapter_metadata:Dict[str,str]):
+def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Dict[str,str], chapter_metadata:List[Dict[str,str]]):
     inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
-    joined = ffmpeg.concat(*inputs_mp3).node
+    joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     # Build FFmpeg command for setting metadata
     out = (
         ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
@@ -98,11 +98,11 @@ def get_metadata(root_tree:etree.ElementBase) -> Dict[str,str]:
     return metadata_result
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <input.epub> <output.m4b>")
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <input.epub>")
         exit(1)
     input_file_path=sys.argv[1]
-    output_file_path=sys.argv[2]
+    output_file_path=os.path.join(os.path.dirname(__file__), os.path.basename(input_file_path)[:-4]) + ".m4b"
     chapters = []
     metada_output = {}
     ch_metadatas = []
@@ -127,6 +127,7 @@ if __name__ == "__main__":
                                     "/@idref"):
                 output_debug_path= os.path.join(os.path.dirname(output_file_path), f"{idref}.log")
                 output_mp3_path  = os.path.join(os.path.dirname(output_file_path), f"{idref}.mp3")
+                #TODO get chapter title by toc.nx
                 text_chapther, metadata_ch = get_text_from_chapter(tree, idref, content_file_dir_path, guide)
                 with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
                     out_debug_file.write(text_chapther)
