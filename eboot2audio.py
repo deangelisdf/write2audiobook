@@ -48,6 +48,7 @@ def prepocess_text(text_in:str) -> str:
 
 def get_text_from_chapter(root_tree:etree.ElementBase, idref:str, content_dir_path:str, guide_manifest:Dict[str,str]):
     text_chapther = ""
+    metadata = {"chapter":""}
     for href in root_tree.xpath( f"//*[local-name()='package']"
                             f"/*[local-name()='manifest']"
                             f"/*[local-name()='item'][@id='{idref}']"
@@ -57,16 +58,27 @@ def get_text_from_chapter(root_tree:etree.ElementBase, idref:str, content_dir_pa
             continue
         xhtmlFilePath = os.path.join(content_dir_path, href)
         subtree = etree.parse(xhtmlFilePath, etree.HTMLParser())
+        title = subtree.xpath("//html/head/title")
+        if len(title)>0:
+            metadata["chapter"] = title[0].text
         for ptag in subtree.xpath("//html/body/*"):
             for text in ptag.itertext():
                 text_chapther += text
             text_chapther += "\n"
-    return text_chapther
-def generate_m4b(output_path:str, chapter_paths:List[str], metada:Dict[str,str]):
+    return text_chapther, metadata
+def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Dict[str,str], chapter_metadata:Dict[str,str]):
     inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
     joined = ffmpeg.concat(*inputs_mp3).node
-    out = ffmpeg.output(joined, output_path, f='mp4', **metada)
-    out.compile()
+    # Build FFmpeg command for setting metadata
+    out = (
+        ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
+        .output(
+            output_path,
+            # Set metadata for each chapter
+            **{f'metadata:s:a:{i}': chapter for i, chapter in enumerate(chapter_metadata, start=1)}
+        )
+    )
+    out.run()
 
 def get_metadata(root_tree:etree.ElementBase) -> Dict[str,str]:
     metadata_leaf = root_tree.xpath("//*[local-name()='package']/*[local-name()='metadata']")[0]
@@ -93,6 +105,7 @@ if __name__ == "__main__":
     output_file_path=sys.argv[2]
     chapters = []
     metada_output = {}
+    ch_metadatas = []
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
         logger.info(f"Parsing 'container.xml' file.")
@@ -114,11 +127,12 @@ if __name__ == "__main__":
                                     "/@idref"):
                 output_debug_path= os.path.join(os.path.dirname(output_file_path), f"{idref}.log")
                 output_mp3_path  = os.path.join(os.path.dirname(output_file_path), f"{idref}.mp3")
-                text_chapther    = get_text_from_chapter(tree, idref, content_file_dir_path, guide)
+                text_chapther, metadata_ch = get_text_from_chapter(tree, idref, content_file_dir_path, guide)
                 with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
                     out_debug_file.write(text_chapther)
                 if len(text_chapther.strip()) > 0:
                     text_chapther = prepocess_text(text_chapther)
                     if generate_audio(text_chapther, output_mp3_path):
                         chapters.append(output_mp3_path)
-    generate_m4b(output_file_path, chapters, metada_output)
+                        ch_metadatas.append(metadata_ch)
+    generate_m4b(output_file_path, chapters, metada_output, chapter_metadata=ch_metadatas)
