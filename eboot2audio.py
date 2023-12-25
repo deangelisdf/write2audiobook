@@ -6,7 +6,7 @@ import tempfile
 import os
 import logging
 import codecs
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from lxml   import etree
 import gtts
 import ffmpeg
@@ -17,11 +17,13 @@ logger = logging.getLogger(__name__)
 LANGUAGE_DICT = {"it-IT":"it"}
 
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
+    """Unzip the epub file and extract all in a temp directory"""
     logger.debug("Extracting input to temp directory %s." % directory_to_extract_path)
     with zipfile.ZipFile(epub_path, 'r') as zip_ref:
         zip_ref.extractall(directory_to_extract_path)
 
 def get_guide_epub(root_tree:etree.ElementBase) -> Dict[str,str]:
+    """Get information about the guide information, described in content.opf file"""
     guide_res = {}
     for reference in root_tree.xpath("//*[local-name()='package']"
                                 "/*[local-name()='guide']"
@@ -30,57 +32,86 @@ def get_guide_epub(root_tree:etree.ElementBase) -> Dict[str,str]:
     return guide_res
 
 def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    if len(text_in.strip()) == 0:
+    """Generating audio using Google Translate API"""
+    def __save_tts_audio(text_to_speech_str:str, mp3_path:str) -> bool:
+        re_try = True
+        while re_try:
+            try:
+                tts = gtts.gTTS(text_to_speech_str, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
+                tts.save(mp3_path)
+                time.sleep(2)
+            except gtts.gTTSError as ex:
+                re_try = False #TODO set a proxy in case of error to retry with another IP
+                time.sleep(1)
+                logger.error(f"gtts error: {ex.msg}")
+                return False
+    def __split_text_into_chunks(text_to_chunk, *, chunk_size):
+        words = text_to_chunk.split()
+        chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
+        return [' '.join(chunk) for chunk in chunks]
+    def __sub_audio(output_path_mp3:str, chunks_sub_text:str):
+        dummy_mp3 = []
+        with tempfile.TemporaryDirectory() as dummy_temp_folder:
+            for idx, chunk in enumerate(chunks_sub_text, start=1):
+                dummy_mp3_path = os.path.join(dummy_temp_folder, f"dummy{idx}.mp3")
+                __save_tts_audio(chunk, dummy_mp3_path)
+                dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
+            dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
+            out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
+            out.run()
+    text_in = text_in.strip()
+    if len(text_in) == 0:
         return False
-    try:
-        tts = gtts.gTTS(text_in, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
-        tts.save(out_mp3_path)
-    except gtts.gTTSError as ex:
-        time.sleep(10)
-        logger.error(f"gtts error: {ex.msg}")
-        return False
-    time.sleep(10)
+    chunks = __split_text_into_chunks(text_in, chunk_size=30)
+    if len(chunks)>1:
+        __sub_audio(out_mp3_path, chunks)
+    else:
+        __save_tts_audio(text_in, out_mp3_path)
     return True
 def prepocess_text(text_in:str) -> str:
+    """Remove possible character not audiable"""
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
     text_out = text_out.replace('\xa0', '')
     return text_out
 
-def get_text_from_chapter(root_tree:etree.ElementBase, idref:str, content_dir_path:str, guide_manifest:Dict[str,str]):
-    text_chapther = ""
+def get_text_from_chapter(root_tree:etree._ElementTree,
+                          idref_ch:str, content_dir_path:str,
+                          guide_manifest:Dict[str,str]) -> Tuple[str, Dict[str,str]]:
+    """Starting from content.opf xml tree, extract chapter html path
+       and parse it to achieve the chapter"""
+    text_result = ""
     metadata = {"chapter":""}
     for href in root_tree.xpath( f"//*[local-name()='package']"
                             f"/*[local-name()='manifest']"
-                            f"/*[local-name()='item'][@id='{idref}']"
+                            f"/*[local-name()='item'][@id='{idref_ch}']"
                             f"/@href"):
         if href in guide_manifest.values():
+            #Skip the chapter used as guide
             logging.debug(f"skipping {href}")
             continue
-        xhtmlFilePath = os.path.join(content_dir_path, href)
-        subtree = etree.parse(xhtmlFilePath, etree.HTMLParser())
+        xhtml_file_path = os.path.join(content_dir_path, href)
+        subtree = etree.parse(xhtml_file_path, etree.HTMLParser())
         title = subtree.xpath("//html/head/title")
         if len(title)>0:
             metadata["chapter"] = title[0].text
         for ptag in subtree.xpath("//html/body/*"):
             for text in ptag.itertext():
-                text_chapther += text
-            text_chapther += "\n"
-    return text_chapther, metadata
+                text_result += text
+            text_result += "\n"
+    return text_result, metadata
 def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Dict[str,str], chapter_metadata:List[Dict[str,str]]):
+    """Generate the final audiobook starting from MP3s and METADATAs"""
     inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     # Build FFmpeg command for setting metadata
-    out = (
-        ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
-        .output(
-            output_path,
-            # Set metadata for each chapter
-            **{f'metadata:s:a:{i}': chapter for i, chapter in enumerate(chapter_metadata, start=1)}
-        )
-    )
+    out = ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
+    # Set metadata for each chapter
+    for i, chapter in enumerate(chapter_metadata, start=1):
+        out = out.output(output_path, **{f'metadata:s:a:{i}': chapter})
     out.run()
 
-def get_metadata(root_tree:etree.ElementBase) -> Dict[str,str]:
+def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
+    """Extract basic metadata, as title, author and copyrights infos from content.opf"""
     metadata_leaf = root_tree.xpath("//*[local-name()='package']/*[local-name()='metadata']")[0]
     metadata_result = {}
     namespace = metadata_leaf.nsmap
@@ -137,3 +168,4 @@ if __name__ == "__main__":
                         chapters.append(output_mp3_path)
                         ch_metadatas.append(metadata_ch)
     generate_m4b(output_file_path, chapters, metada_output, chapter_metadata=ch_metadatas)
+
