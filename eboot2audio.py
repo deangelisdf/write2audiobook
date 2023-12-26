@@ -16,6 +16,22 @@ logger = logging.getLogger(__name__)
 
 LANGUAGE_DICT = {"it-IT":"it"}
 
+def __split_text_into_chunks(string:str, max_chars=gtts.gTTS.GOOGLE_TTS_MAX_CHARS):
+    result = []
+    temp = string
+    while len(temp)>max_chars:
+        # Find the last space within the maximum character limit
+        last_space = temp.rfind(' ', 0, max_chars)
+        if last_space != -1:
+            # If a space is found, cut the string at that point
+            result.append(temp[:last_space])
+        else:
+            # If no space is found within the limit, just cut at max_chars
+            break
+        temp = temp[last_space+1:]
+    result.append(temp)
+    return result
+
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     """Unzip the epub file and extract all in a temp directory"""
     logger.debug("Extracting input to temp directory %s." % directory_to_extract_path)
@@ -39,30 +55,29 @@ def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
             try:
                 tts = gtts.gTTS(text_to_speech_str, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
                 tts.save(mp3_path)
-                time.sleep(2)
+                time.sleep(0.5)
+                re_try = False
             except gtts.gTTSError as ex:
                 re_try = False #TODO set a proxy in case of error to retry with another IP
                 time.sleep(1)
                 logger.error(f"gtts error: {ex.msg}")
                 return False
-    def __split_text_into_chunks(text_to_chunk, *, chunk_size):
-        words = text_to_chunk.split()
-        chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
-        return [' '.join(chunk) for chunk in chunks]
+        return True
     def __sub_audio(output_path_mp3:str, chunks_sub_text:str):
         dummy_mp3 = []
         with tempfile.TemporaryDirectory() as dummy_temp_folder:
             for idx, chunk in enumerate(chunks_sub_text, start=1):
                 dummy_mp3_path = os.path.join(dummy_temp_folder, f"dummy{idx}.mp3")
-                __save_tts_audio(chunk, dummy_mp3_path)
-                dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
-            dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
-            out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
-            out.run()
+                if __save_tts_audio(chunk, dummy_mp3_path):
+                    dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
+            if len(dummy_mp3)>0:
+                dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
+                out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
+                out.run()
     text_in = text_in.strip()
     if len(text_in) == 0:
         return False
-    chunks = __split_text_into_chunks(text_in, chunk_size=30)
+    chunks = __split_text_into_chunks(text_in)
     if len(chunks)>1:
         __sub_audio(out_mp3_path, chunks)
     else:
@@ -72,6 +87,7 @@ def prepocess_text(text_in:str) -> str:
     """Remove possible character not audiable"""
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
     text_out = text_out.replace('\xa0', '')
+    text_out = text_out.replace('\r\n', '\n')
     return text_out
 
 def get_text_from_chapter(root_tree:etree._ElementTree,
@@ -168,4 +184,3 @@ if __name__ == "__main__":
                         chapters.append(output_mp3_path)
                         ch_metadatas.append(metadata_ch)
     generate_m4b(output_file_path, chapters, metada_output, chapter_metadata=ch_metadatas)
-
