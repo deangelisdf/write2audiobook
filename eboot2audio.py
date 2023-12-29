@@ -8,13 +8,16 @@ import logging
 import codecs
 from typing import Dict, List, Tuple
 from lxml   import etree
+import pyttsx3
 import gtts
 import ffmpeg
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
+BACK_END_TTS = "PYTTS"
 LANGUAGE_DICT = {"it-IT":"it"}
+LANGUAGE_DICT_PYTTS = {"it-IT":"italian"}
 
 def __split_text_into_chunks(string:str, max_chars=gtts.gTTS.GOOGLE_TTS_MAX_CHARS):
     result = []
@@ -32,6 +35,47 @@ def __split_text_into_chunks(string:str, max_chars=gtts.gTTS.GOOGLE_TTS_MAX_CHAR
     result.append(temp)
     return result
 
+def __save_tts_audio_gtts(text_to_speech_str:str, mp3_path:str) -> bool:
+    re_try = True
+    while re_try:
+        try:
+            tts = gtts.gTTS(text_to_speech_str, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
+            tts.save(mp3_path)
+            time.sleep(1)
+            re_try = False
+        except gtts.gTTSError as ex:
+            re_try = False #TODO set a proxy in case of error to retry with another IP
+            time.sleep(1)
+            logger.error(f"gtts error: {ex.msg}")
+            return False
+    return True
+def __sub_audio(output_path_mp3:str, chunks_sub_text:str):
+    dummy_mp3 = []
+    with tempfile.TemporaryDirectory() as dummy_temp_folder:
+        for idx, chunk in enumerate(chunks_sub_text, start=1):
+            dummy_mp3_path = os.path.join(dummy_temp_folder, f"dummy{idx}.mp3")
+            if __save_tts_audio_gtts(chunk, dummy_mp3_path):
+                dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
+        if len(dummy_mp3)>0:
+            dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
+            out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
+            out.run()
+
+def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
+    chunks = __split_text_into_chunks(text_in)
+    if len(chunks)>1:
+        __sub_audio(out_mp3_path, chunks)
+    else:
+        return __save_tts_audio_gtts(text_in, out_mp3_path)
+    return True
+
+def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
+    if engine_ptts.getProperty("voice") != lang:
+        engine_ptts.setProperty("voice", LANGUAGE_DICT_PYTTS[lang])
+    engine_ptts.save_to_file(text_in, out_mp3_path)
+    engine_ptts.runAndWait()
+    return True
+
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     """Unzip the epub file and extract all in a temp directory"""
     logger.debug("Extracting input to temp directory %s." % directory_to_extract_path)
@@ -48,41 +92,16 @@ def get_guide_epub(root_tree:etree.ElementBase) -> Dict[str,str]:
     return guide_res
 
 def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    """Generating audio using Google Translate API"""
-    def __save_tts_audio(text_to_speech_str:str, mp3_path:str) -> bool:
-        re_try = True
-        while re_try:
-            try:
-                tts = gtts.gTTS(text_to_speech_str, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
-                tts.save(mp3_path)
-                time.sleep(0.5)
-                re_try = False
-            except gtts.gTTSError as ex:
-                re_try = False #TODO set a proxy in case of error to retry with another IP
-                time.sleep(1)
-                logger.error(f"gtts error: {ex.msg}")
-                return False
-        return True
-    def __sub_audio(output_path_mp3:str, chunks_sub_text:str):
-        dummy_mp3 = []
-        with tempfile.TemporaryDirectory() as dummy_temp_folder:
-            for idx, chunk in enumerate(chunks_sub_text, start=1):
-                dummy_mp3_path = os.path.join(dummy_temp_folder, f"dummy{idx}.mp3")
-                if __save_tts_audio(chunk, dummy_mp3_path):
-                    dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
-            if len(dummy_mp3)>0:
-                dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
-                out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
-                out.run()
+    """Generating audio using tts apis"""
+    ret_val = True
     text_in = text_in.strip()
     if len(text_in) == 0:
         return False
-    chunks = __split_text_into_chunks(text_in)
-    if len(chunks)>1:
-        __sub_audio(out_mp3_path, chunks)
+    if BACK_END_TTS == "GTTS":
+        ret_val = generate_audio_gtts(text_in, out_mp3_path, lang=lang)
     else:
-        __save_tts_audio(text_in, out_mp3_path)
-    return True
+        ret_val = generate_audio_pytts(text_in, out_mp3_path, lang=lang)
+    return ret_val
 def prepocess_text(text_in:str) -> str:
     """Remove possible character not audiable"""
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
@@ -121,9 +140,7 @@ def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Di
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     # Build FFmpeg command for setting metadata
     out = ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
-    # Set metadata for each chapter
-    for i, chapter in enumerate(chapter_metadata, start=1):
-        out = out.output(output_path, **{f'metadata:s:a:{i}': chapter})
+    #TODO add FFMETADATA
     out.run()
 
 def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
@@ -135,16 +152,17 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
         del namespace[None]
     title  = metadata_leaf.xpath("//dc:title", namespaces=namespace)
     if len(title)>0:
-        metadata_result["title"] = title[0].text
+        metadata_result["metadata"] = f"title={title[0].text}"
     author = metadata_leaf.xpath("//dc:creator", namespaces=namespace)
     if len(author)>0:
-        metadata_result["author"] = author[0].text
+        metadata_result["metadata:"] = f"author={author[0].text}"
     rights = metadata_leaf.xpath("//dc:rights", namespaces=namespace)
     if len(rights)>0:
-        metadata_result["copyright"] = rights[0].text
+        metadata_result["metadata:g"] = f"copyright={rights[0].text}"
     return metadata_result
 
 if __name__ == "__main__":
+    sys.argv.append("C:\\Users\\admin\\Downloads\\Ladri di biblioteche - 2020 02 - Aprile\\Sacks, Oliver - Il fiume della coscienza - Adelphi (Biblioteca Adelphi 682).epub")
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <input.epub>")
         exit(1)
@@ -153,6 +171,12 @@ if __name__ == "__main__":
     chapters = []
     metada_output = {}
     ch_metadatas = []
+
+    if BACK_END_TTS == "PYTTS":
+        engine_ptts = pyttsx3.init()
+        #engine_ptts.setProperty('rate', 200)     # setting up new voice rate
+        engine_ptts.setProperty('volume',1.0)    # setting up volume level  between 0 and 1
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
         logger.info(f"Parsing 'container.xml' file.")
