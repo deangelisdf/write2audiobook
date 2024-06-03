@@ -6,18 +6,34 @@ import tempfile
 import os
 import logging
 import codecs
+import asyncio
 from typing import Dict, List, Tuple
 from lxml   import etree
 import pyttsx3
 import gtts
 import ffmpeg
+import edge_tts
+from backend_audio import ffmetadata_generator
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "PYTTS"
+BACK_END_TTS = "EDGE_TTS"
 LANGUAGE_DICT = {"it-IT":"it"}
 LANGUAGE_DICT_PYTTS = {"it-IT":"italian"}
+VOICE = ""
+
+async def get_voices_edge_tts(lang=LANGUAGE_DICT["it-IT"]):
+    try:
+        vs = await edge_tts.VoicesManager.create()
+        ret = vs.find(Gender="Female", Language=lang)
+    except Exception: #TODO add a best exception handling
+        ret = []
+    return ret
+async def generate_audio_edge_tts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
+    com = edge_tts.Communicate(text_in, VOICE)
+    await com.save(out_mp3_path)
+    return True
 
 def __split_text_into_chunks(string:str, max_chars=gtts.gTTS.GOOGLE_TTS_MAX_CHARS):
     result = []
@@ -99,15 +115,22 @@ def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
         return False
     if BACK_END_TTS == "GTTS":
         ret_val = generate_audio_gtts(text_in, out_mp3_path, lang=lang)
-    else:
+    elif BACK_END_TTS == "PYTTS":
         ret_val = generate_audio_pytts(text_in, out_mp3_path, lang=lang)
+    elif BACK_END_TTS == "EDGE_TTS":
+        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
+        #try:
+        loop_audio.run_until_complete(generate_audio_edge_tts(text_in, out_mp3_path, lang="it-IT"))
+        #finally:
+        #    loop_audio.close()
     return ret_val
 def prepocess_text(text_in:str) -> str:
     """Remove possible character not audiable"""
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
     text_out = text_out.replace('\xa0', '')
+    text_out = text_out.replace('\r\n\t', '')
     text_out = text_out.replace('\r\n', '\n')
-    return text_out
+    return text_out.strip()
 
 def get_text_from_chapter(root_tree:etree._ElementTree,
                           idref_ch:str, content_dir_path:str,
@@ -115,7 +138,6 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
     """Starting from content.opf xml tree, extract chapter html path
        and parse it to achieve the chapter"""
     text_result = ""
-    metadata = {"chapter":""}
     for href in root_tree.xpath( f"//*[local-name()='package']"
                             f"/*[local-name()='manifest']"
                             f"/*[local-name()='item'][@id='{idref_ch}']"
@@ -126,22 +148,25 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
             continue
         xhtml_file_path = os.path.join(content_dir_path, href)
         subtree = etree.parse(xhtml_file_path, etree.HTMLParser())
-        title = subtree.xpath("//html/head/title")
-        if len(title)>0:
-            metadata["chapter"] = title[0].text
         for ptag in subtree.xpath("//html/body/*"):
             for text in ptag.itertext():
                 text_result += text
             text_result += "\n"
-    return text_result, metadata
-def generate_m4b(output_path:str, chapter_paths:List[str], audiobook_metadata:Dict[str,str], chapter_metadata:List[Dict[str,str]]):
+    return text_result, {}
+def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: str):
     """Generate the final audiobook starting from MP3s and METADATAs"""
     inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
+    
     # Build FFmpeg command for setting metadata
-    out = ffmpeg.output(joined, output_path, f='mp4', **{'metadata': audiobook_metadata})
-    #TODO add FFMETADATA
-    out.run()
+    out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0)
+    out = out.global_args('-f', 'ffmetadata', '-i', ffmetadata_path)
+    
+    try:
+        ffmpeg.run(out)
+    except ffmpeg.Error as e:
+        logger.error(e.stderr.decode())
+        raise e
 
 def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
     """Extract basic metadata, as title, author and copyrights infos from content.opf"""
@@ -152,31 +177,36 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
         del namespace[None]
     title  = metadata_leaf.xpath("//dc:title", namespaces=namespace)
     if len(title)>0:
-        metadata_result["metadata"] = f"title={title[0].text}"
+        metadata_result["title"] = title[0].text
     author = metadata_leaf.xpath("//dc:creator", namespaces=namespace)
     if len(author)>0:
-        metadata_result["metadata:"] = f"author={author[0].text}"
+        metadata_result["author"] = author[0].text
     rights = metadata_leaf.xpath("//dc:rights", namespaces=namespace)
     if len(rights)>0:
-        metadata_result["metadata:g"] = f"copyright={rights[0].text}"
+        metadata_result["copyright"] = rights[0].text
     return metadata_result
 
 if __name__ == "__main__":
-    sys.argv.append("C:\\Users\\admin\\Downloads\\Ladri di biblioteche - 2020 02 - Aprile\\Sacks, Oliver - Il fiume della coscienza - Adelphi (Biblioteca Adelphi 682).epub")
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <input.epub>")
+        logger.error(f"Usage: {sys.argv[0]} <input.epub>")
         exit(1)
     input_file_path=sys.argv[1]
-    output_file_path=os.path.join(os.path.dirname(__file__), os.path.basename(input_file_path)[:-4]) + ".m4b"
+    output_file_path=os.path.join(os.path.dirname(__file__), os.path.basename(input_file_path)[:-len(".epub")]) + ".m4b"
     chapters = []
-    metada_output = {}
+    metadata_book_output = {}
     ch_metadatas = []
 
     if BACK_END_TTS == "PYTTS":
         engine_ptts = pyttsx3.init()
-        #engine_ptts.setProperty('rate', 200)     # setting up new voice rate
         engine_ptts.setProperty('volume',1.0)    # setting up volume level  between 0 and 1
-
+    elif BACK_END_TTS == "EDGE_TTS":
+        asyncio.set_event_loop(asyncio.ProactorEventLoop())
+        loop = asyncio.get_event_loop_policy().get_event_loop()
+        #try:
+        voices = loop.run_until_complete(get_voices_edge_tts(lang="it"))
+        VOICE = voices[0]["Name"]
+        #finally:
+        #    loop.close()
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
         logger.info(f"Parsing 'container.xml' file.")
@@ -191,7 +221,8 @@ if __name__ == "__main__":
             content_file_dir_path = os.path.dirname(content_file_path)
             tree = etree.parse(content_file_path)
             guide = get_guide_epub(tree)
-            metada_output = get_metadata(tree)
+            metadata_book_output = get_metadata(tree)
+            logger.info(f"Parsed '{root_file_path}' file.")
             for idref in tree.xpath("//*[local-name()='package']"
                                     "/*[local-name()='spine']"
                                     "/*[local-name()='itemref']"
@@ -200,11 +231,16 @@ if __name__ == "__main__":
                 output_mp3_path  = os.path.join(os.path.dirname(output_file_path), f"{idref}.mp3")
                 #TODO get chapter title by toc.nx
                 text_chapther, metadata_ch = get_text_from_chapter(tree, idref, content_file_dir_path, guide)
+                logger.info(f"idref {idref}")
+                text_chapther = prepocess_text(text_chapther)
                 with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
                     out_debug_file.write(text_chapther)
-                if len(text_chapther.strip()) > 0:
-                    text_chapther = prepocess_text(text_chapther)
-                    if generate_audio(text_chapther, output_mp3_path):
-                        chapters.append(output_mp3_path)
-                        ch_metadatas.append(metadata_ch)
-    generate_m4b(output_file_path, chapters, metada_output, chapter_metadata=ch_metadatas)
+                if generate_audio(text_chapther, output_mp3_path):
+                    chapters.append(output_mp3_path)
+    loop.close()
+    metadata_output = ffmetadata_generator.generate_ffmetadata(chapters)
+    with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
+        file_ffmetadata.write(metadata_output)
+    generate_m4b(output_file_path, chapters, "ffmetada")
+
+__author__ = "de angelis domenico francesco"
