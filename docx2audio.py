@@ -4,12 +4,16 @@ import time
 import os
 import logging
 import asyncio
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import pyttsx3
 import gtts
 import edge_tts
-import docx
 from docx import Document
+from docx.document import Document as _Document
+from docx.oxml.text.paragraph import CT_P
+from docx.oxml.table import CT_Tbl
+from docx.table import _Cell, Table, _Row
+from docx.text.paragraph import Paragraph
 from backend_audio import ffmetadata_generator
 from backend_audio import m4b
 
@@ -23,6 +27,28 @@ VOICE = ""
 
 TITLE_KEYWORD  = {"it-IT":"TITOLO",   "en":"TITLE"}
 CHAPTER_KEYWORD= {"it-IT":"CAPITOLO", "en":"CHAPTER"}
+
+def iter_block_items(parent:Union[Document, _Cell, _Row]):
+    """
+    Generate a reference to each paragraph and table child within *parent*,
+    in document order. Each returned value is an instance of either Table or
+    Paragraph. *parent* would most commonly be a reference to a main
+    Document object, but also works for a _Cell object, which itself can
+    contain paragraphs and tables.
+    """
+    if isinstance(parent, _Document):
+        parent_elm = parent.element.body
+    elif isinstance(parent, _Cell):
+        parent_elm = parent._tc
+    elif isinstance(parent, _Row):
+        parent_elm = parent._tr
+    else:
+        raise ValueError("something's not right")
+    for child in parent_elm.iterchildren():
+        if isinstance(child, CT_P):
+            yield Paragraph(child, parent)
+        elif isinstance(child, CT_Tbl):
+            yield Table(child, parent)
 
 async def get_voices_edge_tts(lang=LANGUAGE_DICT["it-IT"]):
     try:
@@ -99,37 +125,44 @@ def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
         #finally:
         #    loop_audio.close()
     return ret_val
-def prepocess_text(text_in:str) -> str:
-    """Remove possible character not audiable"""
-    return text_in.strip()
 
 def extract_chapters(doc:Document, 
-                     style_start_chapter_name:List[str] = ['Heading 1', 'Title', 'Titolo']) -> List[docx.text.paragraph.Paragraph]:
-    chapters: List[List[docx.text.paragraph.Paragraph]] = []
-    temp:List[docx.text.paragraph.Paragraph] = []
-    for p in doc.paragraphs:
-        if p.style.name in style_start_chapter_name:
-            if len(temp) > 1:
-                chapters.append(temp)
-            temp = []
-        if len(p.text) > 0:
-            temp.append(p)
+                     style_start_chapter_name:List[str] = ['Heading 1', 'Title', 'Titolo']) -> List[Paragraph]:
+    chapters: List[List[Paragraph]] = []
+    temp:List[Paragraph] = []
+    for block in iter_block_items(doc):
+        if isinstance(block, Paragraph):
+            if block.style.name in style_start_chapter_name:
+                if len(temp) > 1:
+                    chapters.append(temp)
+                temp = []
+            if len(block.text) == 0:
+                continue
+        temp.append(block)
     return [i for i in chapters if len(i)>0]
 
-def get_text_from_chapter(chapter:List[docx.text.paragraph.Paragraph], 
+def get_text_from_chapter(chapter:List[Union[Paragraph, Table]], 
                           language="it-IT") -> Tuple[str, str]:
     title = chapter[0].text
     text = f"{TITLE_KEYWORD[language]}: {title}.\n"
     idx_list = 0
-    for paragraph in chapter[1:]:
-        if paragraph.style.name == 'List Paragraph':
-            text += f"\t{idx_list}: {paragraph.text}.\n"
-            idx_list += 1
-            continue
-        idx_list = 0
-        if paragraph.style.name == 'Heading 2':
-            text += f"\n.\n{CHAPTER_KEYWORD[language]}: "
-        text += f"{paragraph.text}\n"
+    for block in chapter[1:]:
+        if isinstance(block, Paragraph):
+            if block.style.name == 'List Paragraph':
+                text += f"\t{idx_list}: {block.text}.\n"
+                idx_list += 1
+                continue
+            idx_list = 0
+            if block.style.name == 'Heading 2':
+                text += f"\n.\n{CHAPTER_KEYWORD[language]}: "
+            text += f"{block.text}\n"
+        elif isinstance(block, Table):
+            for row in block.rows:
+                row_data = []
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        row_data.append(paragraph.text)
+                text += "{}\n".format('\t'.join(row_data))
     return text, title
 
 if __name__ == "__main__":
