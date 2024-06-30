@@ -7,12 +7,12 @@ import os
 import logging
 import codecs
 import asyncio
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 from lxml   import etree
 import pyttsx3
 import gtts
-import ffmpeg
 import edge_tts
+from backend_audio import m4b
 from backend_audio import ffmetadata_generator
 
 logging.basicConfig(level=logging.INFO)
@@ -65,22 +65,11 @@ def __save_tts_audio_gtts(text_to_speech_str:str, mp3_path:str) -> bool:
             logger.error(f"gtts error: {ex.msg}")
             return False
     return True
-def __sub_audio(output_path_mp3:str, chunks_sub_text:str):
-    dummy_mp3 = []
-    with tempfile.TemporaryDirectory() as dummy_temp_folder:
-        for idx, chunk in enumerate(chunks_sub_text, start=1):
-            dummy_mp3_path = os.path.join(dummy_temp_folder, f"dummy{idx}.mp3")
-            if __save_tts_audio_gtts(chunk, dummy_mp3_path):
-                dummy_mp3.append(ffmpeg.input(dummy_mp3_path))
-        if len(dummy_mp3)>0:
-            dummy_concat = ffmpeg.concat(*dummy_mp3, v=0, a=1)
-            out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
-            out.run()
 
 def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
     chunks = __split_text_into_chunks(text_in)
     if len(chunks)>1:
-        __sub_audio(out_mp3_path, chunks)
+        m4b.sub_audio(__save_tts_audio_gtts, out_mp3_path, chunks)
     else:
         return __save_tts_audio_gtts(text_in, out_mp3_path)
     return True
@@ -153,20 +142,6 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
                 text_result += text
             text_result += "\n"
     return text_result, {}
-def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: str):
-    """Generate the final audiobook starting from MP3s and METADATAs"""
-    inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
-    joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
-    
-    # Build FFmpeg command for setting metadata
-    out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0)
-    out = out.global_args('-f', 'ffmetadata', '-i', ffmetadata_path)
-    
-    try:
-        ffmpeg.run(out)
-    except ffmpeg.Error as e:
-        logger.error(e.stderr.decode())
-        raise e
 
 def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
     """Extract basic metadata, as title, author and copyrights infos from content.opf"""
@@ -241,6 +216,6 @@ if __name__ == "__main__":
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters)
     with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
         file_ffmetadata.write(metadata_output)
-    generate_m4b(output_file_path, chapters, "ffmetada")
+    m4b.generate_m4b(output_file_path, chapters, "ffmetada")
 
 __author__ = "de angelis domenico francesco"
