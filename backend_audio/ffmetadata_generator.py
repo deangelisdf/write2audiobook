@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import audio_metadata
 
-def generate_ffmetadata(input_audio_paths:list) -> str:
+def generate_ffmetadata(input_audio_paths:list, chapter_titles:list=[]) -> str:
     starttimes=[]
     time = 0 #cummulative start time (nanoseconds)
     for audio_path in input_audio_paths:
@@ -15,9 +15,12 @@ def generate_ffmetadata(input_audio_paths:list) -> str:
     metadata = ""
     last_end = 0
     for idx, start_time in enumerate(starttimes):
-        metadata += f"[CHAPTER]\nSTART={last_end}\nEND={start_time}\ntitle=c{idx}\n"
+        metadata += f"[CHAPTER]\nSTART={last_end}\nEND={start_time}\n"
+        if len(chapter_titles) == 0:
+            metadata += f"title=c{idx}\n"
+        else:
+            metadata += f"title={chapter_titles[idx]}\n"
         last_end = start_time
-
     return metadata
 
 __author__ = "de angelis domenico francesco"
