@@ -120,7 +120,7 @@ def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: st
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     
     # Build FFmpeg command for setting metadata
-    out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0)
+    out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0, audio_bitrate=40)
     out = out.global_args('-f', 'ffmetadata', '-i', ffmetadata_path)
     
     try:
@@ -128,11 +128,6 @@ def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: st
     except ffmpeg.Error as e:
         logger.error(e.stderr.decode())
         raise e
-
-def get_metadata(doc:Document) -> Dict[str,str]:
-    """Extract basic metadata, as title, author and copyrights infos from content.opf"""
-    metadata_result = {}
-    return metadata_result
 
 def extract_chapters(doc:Document, 
                      style_start_chapter_name:List[str] = ['Heading 1', 'Title', 'Titolo']) -> List[docx.text.paragraph.Paragraph]:
