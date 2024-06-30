@@ -155,4 +155,13 @@ cython_debug/
 *.mp3
 *.mp4
 *.m4b
+
+#document
 *.txt
+*.epub
+*.pdf
+*.pptx
+*.ppt
+
+#ffmpeg metadata
+ffmetada

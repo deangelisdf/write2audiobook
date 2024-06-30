@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import sys
-import time
 import zipfile
 import tempfile
 import os
@@ -9,9 +8,6 @@ import codecs
 import asyncio
 from typing import Dict, Tuple
 from lxml   import etree
-import pyttsx3
-import gtts
-import edge_tts
 from backend_audio import m4b
 from backend_audio import ffmetadata_generator
 
@@ -19,67 +15,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BACK_END_TTS = "EDGE_TTS"
-LANGUAGE_DICT = {"it-IT":"it"}
-LANGUAGE_DICT_PYTTS = {"it-IT":"italian"}
-VOICE = ""
-
-async def get_voices_edge_tts(lang=LANGUAGE_DICT["it-IT"]):
-    try:
-        vs = await edge_tts.VoicesManager.create()
-        ret = vs.find(Gender="Female", Language=lang)
-    except Exception: #TODO add a best exception handling
-        ret = []
-    return ret
-async def generate_audio_edge_tts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    com = edge_tts.Communicate(text_in, VOICE)
-    await com.save(out_mp3_path)
-    return True
-
-def __split_text_into_chunks(string:str, max_chars=gtts.gTTS.GOOGLE_TTS_MAX_CHARS):
-    result = []
-    temp = string
-    while len(temp)>max_chars:
-        # Find the last space within the maximum character limit
-        last_space = temp.rfind(' ', 0, max_chars)
-        if last_space != -1:
-            # If a space is found, cut the string at that point
-            result.append(temp[:last_space])
-        else:
-            # If no space is found within the limit, just cut at max_chars
-            break
-        temp = temp[last_space+1:]
-    result.append(temp)
-    return result
-
-def __save_tts_audio_gtts(text_to_speech_str:str, mp3_path:str) -> bool:
-    re_try = True
-    while re_try:
-        try:
-            tts = gtts.gTTS(text_to_speech_str, lang=LANGUAGE_DICT[lang], slow=False, tld="com")
-            tts.save(mp3_path)
-            time.sleep(1)
-            re_try = False
-        except gtts.gTTSError as ex:
-            re_try = False #TODO set a proxy in case of error to retry with another IP
-            time.sleep(1)
-            logger.error(f"gtts error: {ex.msg}")
-            return False
-    return True
-
-def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    chunks = __split_text_into_chunks(text_in)
-    if len(chunks)>1:
-        m4b.sub_audio(__save_tts_audio_gtts, out_mp3_path, chunks)
-    else:
-        return __save_tts_audio_gtts(text_in, out_mp3_path)
-    return True
-
-def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    if engine_ptts.getProperty("voice") != lang:
-        engine_ptts.setProperty("voice", LANGUAGE_DICT_PYTTS[lang])
-    engine_ptts.save_to_file(text_in, out_mp3_path)
-    engine_ptts.runAndWait()
-    return True
 
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     """Unzip the epub file and extract all in a temp directory"""
@@ -103,13 +38,13 @@ def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
     if len(text_in) == 0:
         return False
     if BACK_END_TTS == "GTTS":
-        ret_val = generate_audio_gtts(text_in, out_mp3_path, lang=lang)
+        ret_val = m4b.generate_audio_gtts(text_in, out_mp3_path, lang=lang)
     elif BACK_END_TTS == "PYTTS":
-        ret_val = generate_audio_pytts(text_in, out_mp3_path, lang=lang)
+        ret_val = m4b.generate_audio_pytts(text_in, out_mp3_path, lang=lang)
     elif BACK_END_TTS == "EDGE_TTS":
         loop_audio = asyncio.get_event_loop_policy().get_event_loop()
         #try:
-        loop_audio.run_until_complete(generate_audio_edge_tts(text_in, out_mp3_path, lang="it-IT"))
+        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path, lang=lang))
         #finally:
         #    loop_audio.close()
     return ret_val
@@ -163,25 +98,17 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        logger.error(f"Usage: {sys.argv[0]} <input.epub>")
+        logger.error("Usage: {} <input.epub>".format(sys.argv[0]))
         exit(1)
     input_file_path=sys.argv[1]
-    output_file_path=os.path.join(os.path.dirname(__file__), os.path.basename(input_file_path)[:-len(".epub")]) + ".m4b"
+    output_file_path=os.path.join(os.path.dirname(__file__),
+                                  os.path.basename(input_file_path)[:-len(".epub")]) + ".m4b"
     chapters = []
     metadata_book_output = {}
     ch_metadatas = []
 
-    if BACK_END_TTS == "PYTTS":
-        engine_ptts = pyttsx3.init()
-        engine_ptts.setProperty('volume',1.0)    # setting up volume level  between 0 and 1
-    elif BACK_END_TTS == "EDGE_TTS":
-        asyncio.set_event_loop(asyncio.ProactorEventLoop())
-        loop = asyncio.get_event_loop_policy().get_event_loop()
-        #try:
-        voices = loop.run_until_complete(get_voices_edge_tts(lang="it"))
-        VOICE = voices[0]["Name"]
-        #finally:
-        #    loop.close()
+    m4b.init(BACK_END_TTS)
+    
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
         logger.info(f"Parsing 'container.xml' file.")
@@ -212,7 +139,7 @@ if __name__ == "__main__":
                     out_debug_file.write(text_chapther)
                 if generate_audio(text_chapther, output_mp3_path):
                     chapters.append(output_mp3_path)
-    loop.close()
+    m4b.close_edge_tts()
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters)
     with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
         file_ffmetadata.write(metadata_output)
