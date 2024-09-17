@@ -28,6 +28,12 @@ CHAPTER_KEYWORD= {"it-IT":"CAPITOLO", "en":"CHAPTER"}
 TITLE_TOKENS   = ('Heading 1', 'Title', 'Titolo')
 LIST_ITEM_TOKEN= 'List Paragraph'
 CHAPTER_TOKEN  = 'Heading 2'
+TABLE_VERBOSITY = {
+    'start_table': "Starting table reading...",
+    'end_table': "Finished reading table.",
+    'row_processed': "Processed row: {}",
+    'cell_processed': "Processed cell: {}"
+}
 
 def iter_block_items(parent:Union[Document, _Cell, _Row]):
     """
@@ -88,7 +94,7 @@ def extract_chapters(doc:Document,
     return [i for i in temp_chapters if len(i)>0]
 
 def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
-                          language="it-IT") -> Tuple[str, str]:
+                          language="it-IT", verbose = False) -> Tuple[str, str]:
     """Generate an intermediate representation in textual version,
     starting from docx format to pure textual, adding sugar context informations."""
     title_str = chapter_doc[0].text
@@ -105,12 +111,25 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
                 text += f"\n.\n{CHAPTER_KEYWORD[language]}: "
             text += f"{block.text}\n"
         elif isinstance(block, Table):
-            for row in block.rows:
+            if verbose:
+                logger.info(TABLE_VERBOSITY['start_table'])
+            
+            for row_index, row in enumerate(block.rows):
                 row_data = []
-                for cell in row.cells:
+                for cell_index, cell in enumerate(row.cells):
                     for paragraph in cell.paragraphs:
                         row_data.append(paragraph.text)
+                    
+                    if verbose:
+                        logger.info(TABLE_VERBOSITY['cell_processed'].format(cell_index))
+                
                 text += "{}\n".format('\t'.join(row_data))
+                
+                if verbose:
+                    logger.info(TABLE_VERBOSITY['row_processed'].format(row_index))
+            
+            if verbose:
+                logger.info(TABLE_VERBOSITY['end_table'])
     return text, title_str
 
 if __name__ == "__main__":
