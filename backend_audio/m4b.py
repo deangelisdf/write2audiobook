@@ -130,8 +130,25 @@ def init(backend:str):
         voices = loop.run_until_complete(get_voices_edge_tts(lang="it"))
         voice_edge = voices[0]["Name"]
 
-#def close_edge_tts():
-#    """Need to close the async io process"""
-#    global loop #pylint: disable=W0603,W0602
-#    if loop:
-#        loop.close()
+def generate_audio(text_in:str, out_mp3_path:str, *,
+                   lang:str="it-IT", backend="PYTTS") -> bool:
+    """Generating audio using tts apis"""
+    ret_val = True
+    text_in = text_in.strip()
+    if len(text_in) == 0:
+        return False
+    if backend == "GTTS":
+        ret_val = generate_audio_gtts(text_in, out_mp3_path, lang=lang)
+    elif backend == "PYTTS":
+        ret_val = generate_audio_pytts(text_in, out_mp3_path, lang=lang)
+    elif backend == "EDGE_TTS":
+        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
+        loop_audio.run_until_complete(generate_audio_edge_tts(text_in, out_mp3_path,
+                                                              lang=lang, voice=voice_edge))
+    return ret_val
+
+def close_edge_tts():
+    """Need to close the async io process"""
+    global loop #pylint: disable=W0603,W0602
+    if loop:
+        loop.close()

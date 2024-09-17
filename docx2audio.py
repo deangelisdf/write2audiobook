@@ -5,11 +5,8 @@ description: Convert your docx to audiobook in M4B format
 Usage example:
     python docx2audio.py document.docx
 """
-import sys
 import os
 import logging
-import asyncio
-from pathlib import Path
 from typing import List, Tuple, Union
 from docx import Document
 from docx.document import Document as _Document
@@ -19,6 +16,7 @@ from docx.table import _Cell, Table, _Row
 from docx.text.paragraph import Paragraph
 from backend_audio import ffmetadata_generator
 from backend_audio import m4b
+from frontend import input_tool
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,22 +50,6 @@ def iter_block_items(parent:Union[Document, _Cell, _Row]):
             yield Paragraph(child, parent)
         elif isinstance(child, CT_Tbl):
             yield Table(child, parent)
-
-def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    """Generating audio using tts apis"""
-    ret_val = True
-    text_in = text_in.strip()
-    if len(text_in) == 0:
-        return False
-    if BACK_END_TTS == "GTTS":
-        ret_val = m4b.generate_audio_gtts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "PYTTS":
-        ret_val = m4b.generate_audio_pytts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "EDGE_TTS":
-        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
-        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path,
-                                                                  lang=lang, voice=m4b.voice_edge))
-    return ret_val
 
 def extract_chapters(doc:Document,
                      style_start_chapter_name:Tuple[str] = TITLE_TOKENS
@@ -114,13 +96,7 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
     return text, title_str
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        logger.error("Usage: %s <input.docx>",sys.argv[0])
-        sys.exit(1)
-    input_file_path=sys.argv[1]
-    output_file_name = Path(input_file_path).stem
-    output_file_path=os.path.join(os.path.dirname(__file__),
-                                  output_file_name) + ".m4b"
+    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
     chapters_path: List[str] = []
     title_list:List[str] = []
@@ -139,7 +115,7 @@ if __name__ == "__main__":
         logger.info("idref %s", idref)
         with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
             out_debug_file.write(text_chapther)
-        if generate_audio(text_chapther, output_mp3_path):
+        if m4b.generate_audio(text_chapther, output_mp3_path, backend=BACK_END_TTS):
             chapters_path.append(output_mp3_path)
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters_path,
                                                                chapter_titles=title_list)

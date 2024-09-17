@@ -9,8 +9,8 @@ import sys
 import os
 import logging
 import asyncio
-from pathlib import Path
 from backend_audio import m4b
+from frontend import input_tool
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -20,14 +20,8 @@ LANGUAGE = "it"
 
 def main():
     """main function"""
-    if len(sys.argv) != 2:
-        logger.error("Usage: %s <input.txt>", sys.argv[0])
-        sys.exit(1)
-    input_file_path=sys.argv[1]
-    output_file_name = Path(input_file_path).stem
-    output_file_path = os.path.join(os.path.dirname(__file__),
-                                    output_file_name) + ".mp3"
-
+    _, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__),
+                                                   format_output="mp3")
     text:str = ""
     with open(sys.argv[1], "r", encoding="UTF-8") as file:
         text = ''.join(file.readlines())

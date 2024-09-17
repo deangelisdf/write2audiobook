@@ -5,14 +5,13 @@ description: Convert your pptx to audiobook in M4B format
 Usage example:
     python pptx2audio.py presentation.pptx
 """
-import sys
 import os
 import logging
 import asyncio
-from pathlib import Path
 import pptx
 from pptx import presentation, slide
 from backend_audio import m4b
+from frontend import input_tool
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -54,14 +53,7 @@ def extract_pptx_text(path_pptx:str) -> str:
     return text_out
 
 if __name__ == "__main__":
-    sys.argv.append("Convegno Napoli.pptx")
-    if len(sys.argv) != 2:
-        print("Usage: %s <input.pptx>", sys.argv[0])
-        sys.exit(1)
-    input_file_path=sys.argv[1]
-    output_file_name = Path(input_file_path).stem
-    output_file_path=os.path.join(os.path.dirname(__file__),
-                                  output_file_name) + ".m4b"
+    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
     metada_output = {}
     ch_metadatas = []

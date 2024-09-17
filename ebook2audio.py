@@ -5,18 +5,16 @@ description: starting from epub file generate a m4b file
 Usage example:
     python ebook2audio.py book.epub
 """
-import sys
 import zipfile
 import tempfile
 import os
 import logging
 import codecs
-import asyncio
-from pathlib import Path
 from typing import Dict, Tuple
 from lxml   import etree
 from backend_audio import m4b
 from backend_audio import ffmetadata_generator
+from frontend import input_tool
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,23 +36,6 @@ def get_guide_epub(root_tree: etree.ElementBase) -> Dict[str,str]:
         guide_res[reference.attrib['type']] = reference.attrib['href']
     return guide_res
 
-def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    """Generating audio using tts apis"""
-    ret_val = True
-    text_in = text_in.strip()
-    if len(text_in) == 0:
-        return False
-    if BACK_END_TTS == "GTTS":
-        ret_val = m4b.generate_audio_gtts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "PYTTS":
-        ret_val = m4b.generate_audio_pytts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "EDGE_TTS":
-        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
-        #try:
-        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path, lang=lang))
-        #finally:
-        #    loop_audio.close()
-    return ret_val
 def prepocess_text(text_in:str) -> str:
     """Remove possible character not audiable"""
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
@@ -104,13 +85,7 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
     return metadata_result
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        logger.error("Usage: %s <input.epub>", sys.argv[0])
-        sys.exit(1)
-    input_file_path=sys.argv[1]
-    output_file_name = Path(input_file_path).stem
-    output_file_path=os.path.join(os.path.dirname(__file__),
-                                  output_file_name) + ".m4b"
+    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
     metadata_book_output = {}
     ch_metadatas = []
@@ -144,7 +119,7 @@ if __name__ == "__main__":
                 text_chapther = prepocess_text(text_chapther)
                 with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
                     out_debug_file.write(text_chapther)
-                if generate_audio(text_chapther, output_mp3_path):
+                if m4b.generate_audio(text_chapther, output_mp3_path, backend=BACK_END_TTS):
                     chapters.append(output_mp3_path)
     m4b.close_edge_tts()
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters)
