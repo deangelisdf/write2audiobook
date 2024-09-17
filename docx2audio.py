@@ -1,13 +1,15 @@
 #!/usr/bin/python3
-"""Convert your docx to audiobook in M4B format
-Example of use:
-
-python docx2audio.py document.docx
+"""
+file: docx2audio.py
+description: Convert your docx to audiobook in M4B format
+Usage example:
+    python docx2audio.py document.docx
 """
 import sys
 import os
 import logging
 import asyncio
+from pathlib import Path
 from typing import List, Tuple, Union
 from docx import Document
 from docx.document import Document as _Document
@@ -40,9 +42,9 @@ def iter_block_items(parent:Union[Document, _Cell, _Row]):
     if isinstance(parent, _Document):
         parent_elm = parent.element.body
     elif isinstance(parent, _Cell):
-        parent_elm = parent._tc
+        parent_elm = parent._tc #pylint: disable=W0212
     elif isinstance(parent, _Row):
-        parent_elm = parent._tr
+        parent_elm = parent._tr #pylint: disable=W0212
     else:
         raise ValueError("something's not right")
     for child in parent_elm.iterchildren():
@@ -63,10 +65,8 @@ def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
         ret_val = m4b.generate_audio_pytts(text_in, out_mp3_path, lang=lang)
     elif BACK_END_TTS == "EDGE_TTS":
         loop_audio = asyncio.get_event_loop_policy().get_event_loop()
-        #try:
-        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path, lang=lang))
-        #finally:
-        #    loop_audio.close()
+        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path,
+                                                                  lang=lang, voice=m4b.voice_edge))
     return ret_val
 
 def extract_chapters(doc:Document,
@@ -115,11 +115,12 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        logger.error("Usage: {} <input.docx>".format(sys.argv[0]))
-        exit(1)
+        logger.error("Usage: %s <input.docx>",sys.argv[0])
+        sys.exit(1)
     input_file_path=sys.argv[1]
+    output_file_name = Path(input_file_path).stem
     output_file_path=os.path.join(os.path.dirname(__file__),
-                                  os.path.basename(input_file_path)[:-len(".docx")]) + ".m4b"
+                                  output_file_name) + ".m4b"
     chapters = []
     chapters_path: List[str] = []
     title_list:List[str] = []
@@ -135,7 +136,7 @@ if __name__ == "__main__":
         output_mp3_path   = f"{input_file_path}.c{idref}.mp3"
         text_chapther, title = get_text_from_chapter(chapter)
         title_list.append(title)
-        logger.info("idref {}".format(idref))
+        logger.info("idref %s", idref)
         with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
             out_debug_file.write(text_chapther)
         if generate_audio(text_chapther, output_mp3_path):

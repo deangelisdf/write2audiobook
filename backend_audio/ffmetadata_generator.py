@@ -5,7 +5,7 @@ Goal: generate metadata to inject in m4b format file
 import audio_metadata
 
 def generate_ffmetadata(input_audio_paths:list,
-                        chapter_titles:list=[]) -> str:
+                        chapter_titles:list=None) -> str:
     """Generate metadata in ffmpeg format
     Args:
         input_audio_paths: List[str] - path of audiable files
@@ -14,6 +14,8 @@ def generate_ffmetadata(input_audio_paths:list,
         metadata: str
     """
     starttimes=[]
+    if chapter_titles is None:
+        chapter_titles = []
     time = 0 #cummulative start time (nanoseconds)
     for audio_path in input_audio_paths:
         metadata_audio : audio_metadata.formats.mp3.MP3 = audio_metadata.load(audio_path)
