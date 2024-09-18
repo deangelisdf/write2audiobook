@@ -12,14 +12,13 @@ import edge_tts
 import ffmpeg
 
 LANGUAGE_DICT = {"it-IT":"it"}
-LANGUAGE_DICT_PYTTS = {"it-IT":"italian"}
-voice_edge = ""
+LANGUAGE_DICT_PYTTS = {"it":"italian"}
+voice_edge = "" #pylint: disable=C0103
 
 BIT_RATE_HUMAN = 40
 
-engine_ptts = None
-loop = None
-
+engine_ptts = None #pylint: disable=C0103
+loop = None #pylint: disable=C0103
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,15 +28,16 @@ async def get_voices_edge_tts(lang=LANGUAGE_DICT["it-IT"]):
     try:
         vs = await edge_tts.VoicesManager.create()
         ret = vs.find(Gender="Female", Language=lang)
-    except Exception: #TODO add a best exception handling
+    except Exception: #TODO add a best exception handling #pylint: disable=W0511,W0718
         ret = []
     return ret
 async def generate_audio_edge_tts(text_in:str,
                                   out_mp3_path:str, *,
-                                  lang:str="it-IT") -> bool:
+                                  lang:str="it-IT", # pylint: disable=W0613
+                                  voice:str) -> bool:
     """Generate audio with EDGE-TTS starting from text_in string
     and save it in out_mp3_path path"""
-    com = edge_tts.Communicate(text_in, voice_edge)
+    com = edge_tts.Communicate(text_in, voice)
     await com.save(out_mp3_path)
     return True
 
@@ -66,9 +66,9 @@ def __save_tts_audio_gtts(text_to_speech_str:str, mp3_path:str, lang:str) -> boo
             time.sleep(1)
             re_try = False
         except gtts.gTTSError as ex:
-            re_try = False #TODO set a proxy in case of error to retry with another IP
+            re_try = False
             time.sleep(1)
-            logger.error("gtts error: {}".format(ex.msg))
+            logger.error("gtts error: %s", ex.msg)
             return False
     return True
 
@@ -76,7 +76,7 @@ def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> b
     """Generate audio using GTTS apis"""
     chunks = __split_text_into_chunks(text_in)
     if len(chunks)>1:
-        sub_audio(__save_tts_audio_gtts, out_mp3_path, chunks, lang)
+        __sub_audio(__save_tts_audio_gtts, out_mp3_path, chunks, lang)
     else:
         return __save_tts_audio_gtts(text_in, out_mp3_path, lang)
     return True
@@ -89,7 +89,7 @@ def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> 
     engine_ptts.runAndWait()
     return True
 
-def sub_audio(audio_generator:Callable[[str, str], bool],
+def __sub_audio(audio_generator:Callable[[str, str], bool],
               output_path_mp3:str, chunks_sub_text:str, lang:str):
     dummy_mp3 = []
     with tempfile.TemporaryDirectory() as dummy_temp_folder:
@@ -116,22 +116,39 @@ def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: st
         raise e
 
 def init(backend:str):
-    global engine_ptts
-    global voice_edge
+    """Init back end code per text-to-speech
+    SUPPORTED: EDGE_TTS, PYTTS, GTTS"""
+    global engine_ptts #pylint: disable=W0603
+    global voice_edge  #pylint: disable=W0603
+    global loop        #pylint: disable=W0603
     if backend == "PYTTS":
         engine_ptts = pyttsx3.init()
         engine_ptts.setProperty('volume',1.0)    # setting up volume level  between 0 and 1
     elif backend == "EDGE_TTS":
         asyncio.set_event_loop(asyncio.ProactorEventLoop())
         loop = asyncio.get_event_loop_policy().get_event_loop()
-        #try:
         voices = loop.run_until_complete(get_voices_edge_tts(lang="it"))
         voice_edge = voices[0]["Name"]
-        #finally:
-        #    loop.close()
+
+def generate_audio(text_in:str, out_mp3_path:str, *,
+                   lang:str="it-IT", backend="PYTTS") -> bool:
+    """Generating audio using tts apis"""
+    ret_val = True
+    text_in = text_in.strip()
+    if len(text_in) == 0:
+        return False
+    if backend == "GTTS":
+        ret_val = generate_audio_gtts(text_in, out_mp3_path, lang=lang)
+    elif backend == "PYTTS":
+        ret_val = generate_audio_pytts(text_in, out_mp3_path, lang=lang)
+    elif backend == "EDGE_TTS":
+        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
+        loop_audio.run_until_complete(generate_audio_edge_tts(text_in, out_mp3_path,
+                                                              lang=lang, voice=voice_edge))
+    return ret_val
 
 def close_edge_tts():
     """Need to close the async io process"""
-    global loop
+    global loop #pylint: disable=W0603,W0602
     if loop:
         loop.close()
