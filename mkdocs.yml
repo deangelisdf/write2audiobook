@@ -4,6 +4,7 @@ repo_url: https://github.com/greg-martinez44/write2audiobook
 edit_uri: https://github.com/greg-martinez44/write2audiobook/edit/gh-docs/docs/
 nav:
   - Home: index.md
+  - Quick Start: quick-start.md
   - About:
     - Release Notes: about/release-notes.md
     - Contributing: about/contributing.md
@@ -11,3 +12,7 @@ nav:
 
 copyright: Copyright &copy; 2023 De Angelis Domenico Francesco.
 
+markdown_extensions:
+  - toc:
+      baselevel: 2
+  - callouts
