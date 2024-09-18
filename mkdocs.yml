@@ -1,0 +1,10 @@
+site_name: Write2Audiobook
+theme: readthedocs
+repo_url: hhttps://github.com/greg-martinez44/write2audiobook
+edit_uri: hhttps://github.com/greg-martinez44/write2audiobook/edit/gh-docs/docs/index.md
+nav:
+  - Home: index.md
+  - About:
+    - License: about/license.md
+    - Release Notes: about/release-notes.md
+
