@@ -2,9 +2,8 @@
 
 ## Included projects
 
-ReadTheDocs theme - [View license](https://github.com/readthedocs/sphinx_rtd_theme/blob/master/LICENSE).
-
-MkDocs site generator - [View license](https://github.com/mkdocs/mkdocs/blob/master/LICENSE)
+- ReadTheDocs theme - [View license](https://github.com/readthedocs/sphinx_rtd_theme/blob/master/LICENSE).
+- MkDocs site generator - [View license](https://github.com/mkdocs/mkdocs/blob/master/LICENSE)
 
 Many thanks to the authors and contributors of those wonderful projects.
 

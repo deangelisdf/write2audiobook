@@ -1,17 +1,5 @@
-# Welcome to MkDocs
+# Welcome to Write2Audiobook
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Write2Audiobook is a powerful tool that converts EPUB, TXT, PPT, and DOCX documents into engaging audiobooks directly from the command-line. This tool is perfect for making reading more accessible for people with visual impairments and for those who simply prefer listening on the go.
 
-## Commands
-
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+To see Write2Audiobook in action, check out the Quick start guide. Then go to the User guide for more information.
