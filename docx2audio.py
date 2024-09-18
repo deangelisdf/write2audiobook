@@ -5,6 +5,7 @@ description: Convert your docx to audiobook in M4B format
 Usage example:
     python docx2audio.py document.docx
 """
+import sys
 import os
 import logging
 from typing import List, Tuple, Union
@@ -21,7 +22,10 @@ from frontend import input_tool
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+if sys.platform in ('win32', 'cygwin'):
+    BACK_END_TTS = "EDGE_TTS"
+else:
+    BACK_END_TTS = "PYTTS"
 
 TITLE_KEYWORD  = {"it-IT":"TITOLO",   "en":"TITLE"}
 CHAPTER_KEYWORD= {"it-IT":"CAPITOLO", "en":"CHAPTER"}

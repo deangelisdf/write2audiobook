@@ -83,8 +83,8 @@ def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> b
 
 def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
     """Generate audio using PYTTS apis"""
-    if engine_ptts.getProperty("voice_edge") != lang:
-        engine_ptts.setProperty("voice_edge", LANGUAGE_DICT_PYTTS[lang])
+    if engine_ptts.getProperty("voice") != lang:
+        engine_ptts.setProperty("voice", LANGUAGE_DICT_PYTTS[lang])
     engine_ptts.save_to_file(text_in, out_mp3_path)
     engine_ptts.runAndWait()
     return True

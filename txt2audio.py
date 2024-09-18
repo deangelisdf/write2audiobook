@@ -15,7 +15,10 @@ from frontend import input_tool
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS" #"PYTTS"
+if sys.platform in ('win32', 'cygwin'):
+    BACK_END_TTS = "EDGE_TTS"
+else:
+    BACK_END_TTS = "PYTTS"
 LANGUAGE = "it"
 
 def main():

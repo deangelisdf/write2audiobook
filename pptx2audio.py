@@ -5,6 +5,7 @@ description: Convert your pptx to audiobook in M4B format
 Usage example:
     python pptx2audio.py presentation.pptx
 """
+import sys
 import os
 import logging
 import asyncio
@@ -16,7 +17,10 @@ from frontend import input_tool
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+if sys.platform in ('win32', 'cygwin'):
+    BACK_END_TTS = "EDGE_TTS"
+else:
+    BACK_END_TTS = "PYTTS"
 LANGUAGE_DICT = {"it-IT":"it"}
 LANGUAGE_DICT_PYTTS = {"it-IT":"italian", "en":"english"}
 
