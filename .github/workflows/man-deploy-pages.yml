@@ -6,10 +6,6 @@ on:
     paths: ["docs/**", "mkdocs.yml"]
   workflow_dispatch:
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
   deploy:
     uses: ./.github/workflows/deploy-pages.yml
