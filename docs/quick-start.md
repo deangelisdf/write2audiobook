@@ -4,7 +4,7 @@ Follow this tutorial to learn how to use Write2Audiobook.
 
 ## Clone the repository
 
-Clone the repository to your computer.
+Clone the repository to your computer. Then use the `cd` command to enter the project's root directory.
 
 ```bash
 git clone https://github.com/deangelisdf/write2audiobook.git
