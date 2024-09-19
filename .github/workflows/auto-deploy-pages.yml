@@ -12,4 +12,4 @@ concurrency:
 jobs:
   deploy:
     if: github.event.pull_request.merged
-    uses: ./.github/workflows/pages/deploy-pages.yml
+    uses: ./.github/workflows/deploy-pages.yml

@@ -12,4 +12,4 @@ concurrency:
 
 jobs:
   deploy:
-    uses: ./.github/workflows/pages/deploy-pages.yml
+    uses: ./.github/workflows/deploy-pages.yml
