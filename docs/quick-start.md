@@ -8,6 +8,7 @@ Clone the repository to your computer.
 
 ```bash
 git clone https://github.com/deangelisdf/write2audiobook.git
+cd write2audiobook
 ```
 
 ## Create a virtual environment
