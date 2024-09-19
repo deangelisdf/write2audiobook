@@ -6,6 +6,6 @@ on:
     paths: ["docs/**", "mkdocs.yml"]
 
 jobs:
-  deploy:
+  call-deploy-job:
     if: github.event.pull_request.merged
     uses: ./.github/workflows/deploy-pages.yml
