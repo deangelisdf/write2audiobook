@@ -16,9 +16,9 @@ from frontend import input_tool
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+BACK_END_TTS = m4b.get_back_end_tts()
 LANGUAGE_DICT = {"it-IT":"it"}
-LANGUAGE_DICT_PYTTS = {"it-IT":"italian", "en":"english"}
+LANGUAGE_DICT_PYTTS = {"it":"italian", "en":"english"}
 
 def __get_notes(note: slide.NotesSlide) -> str:
     print(note)

@@ -19,7 +19,7 @@ from frontend import input_tool
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+BACK_END_TTS = m4b.get_back_end_tts()
 
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     """Unzip the epub file and extract all in a temp directory"""

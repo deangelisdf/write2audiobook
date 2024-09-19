@@ -21,7 +21,7 @@ from frontend import input_tool
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+BACK_END_TTS = m4b.get_back_end_tts()
 
 TITLE_KEYWORD  = {"it-IT":"TITOLO",   "en":"TITLE"}
 CHAPTER_KEYWORD= {"it-IT":"CAPITOLO", "en":"CHAPTER"}

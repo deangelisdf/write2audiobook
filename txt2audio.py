@@ -15,7 +15,8 @@ from frontend import input_tool
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS" #"PYTTS"
+BACK_END_TTS = m4b.get_back_end_tts()
+
 LANGUAGE = "it"
 
 def main():
