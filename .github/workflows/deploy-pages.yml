@@ -17,11 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./docs/requirements
+        working-directory: ./docs
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install -r requirements
-      - run: mkdocs gh-deploy
+      - name: Install requirements
+        run: python -m pip install -r requirements
+      - name: Deploy mkdocs branch
+        run: mkdocs gh-deploy
