@@ -1,2 +1,4 @@
 mkdocs
 markdown-callouts
+pymdown-extensions
+mkdocs-material

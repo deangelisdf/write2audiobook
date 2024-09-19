@@ -1,5 +1,13 @@
 site_name: Write2Audiobook
-theme: readthedocs
+theme:
+  name: material
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
 repo_url: https://github.com/greg-martinez44/write2audiobook
 edit_uri: https://github.com/greg-martinez44/write2audiobook/edit/gh-docs/docs/
 nav:
@@ -13,6 +21,8 @@ nav:
 copyright: Copyright &copy; 2023 De Angelis Domenico Francesco.
 
 markdown_extensions:
-  - toc:
-      baselevel: 2
-  - callouts
+  - admonition
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
