@@ -8,4 +8,4 @@ from the command-line. This tool is perfect for making reading more accessible f
 for those who simply prefer listening on the go.
 
 To see Write2Audiobook in action, check out the [Quick start guide](quick-start.md). Then go to the
-[User guide](user-guide/text-to-audio.md) to learn more.
+[User guide](./user-guide/download-scripts.md) to learn more.

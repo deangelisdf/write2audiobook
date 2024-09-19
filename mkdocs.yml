@@ -22,7 +22,12 @@ nav:
   - Home: index.md
   - Quick start: quick-start.md
   - User guide:
-    - Convert text to audio: user-guide/text-to-audio.md
+    - Download the scripts: user-guide/download-scripts.md
+    - Install libraries: user-guide/install-libraries.md
+    - Text files: user-guide/text-to-audio.md
+    - Word documents: user-guide/docx-to-audio.md
+    - PowerPoint presentations: user-guide/pptx-to-audio.md
+    - Ebooks: user-guide/ebook-to-audio.md
   - About:
     - Release Notes: about/release-notes.md
     - Contributing: about/contributing.md
