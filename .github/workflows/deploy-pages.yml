@@ -1,11 +1,11 @@
 name: deploy-pages
 
 on:
-  push:
-    branches: ["main", "gh-docs"]
-    paths: ["docs/**", "mkdocs.yml"]
-  pull_request:
-    types: [closed]
+  # push:
+  #   branches: ["main", "gh-docs"]
+  #   paths: ["docs/**", "mkdocs.yml"]
+  # pull_request:
+  #   types: [closed]
   workflow_dispatch:
 
 permissions:
