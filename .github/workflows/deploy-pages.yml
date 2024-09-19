@@ -1,0 +1,31 @@
+name: deploy-pages
+
+on:
+  push:
+    branches: ["main", "gh-docs"]
+    paths: ["docs/**", "mkdocs.yml"]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: |
+        python -m pip install -r docs/requirements
+      - run: mkdocs gh-deploy
