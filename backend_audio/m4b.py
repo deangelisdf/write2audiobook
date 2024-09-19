@@ -12,7 +12,7 @@ import edge_tts
 import ffmpeg
 
 LANGUAGE_DICT = {"it-IT":"it"}
-LANGUAGE_DICT_PYTTS = {"it":"italian"}
+LANGUAGE_DICT_PYTTS = {"it":"italian", "en":"default"}
 voice_edge = "" #pylint: disable=C0103
 
 BIT_RATE_HUMAN = 40
@@ -81,7 +81,7 @@ def generate_audio_gtts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> b
         return __save_tts_audio_gtts(text_in, out_mp3_path, lang)
     return True
 
-def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
+def generate_audio_pytts(text_in:str, out_mp3_path:str, *, lang:str="it") -> bool:
     """Generate audio using PYTTS apis"""
     if engine_ptts.getProperty("voice") != lang:
         engine_ptts.setProperty("voice", LANGUAGE_DICT_PYTTS[lang])
@@ -131,7 +131,7 @@ def init(backend:str):
         voice_edge = voices[0]["Name"]
 
 def generate_audio(text_in:str, out_mp3_path:str, *,
-                   lang:str="it-IT", backend="PYTTS") -> bool:
+                   lang:str="it", backend="PYTTS") -> bool:
     """Generating audio using tts apis"""
     ret_val = True
     text_in = text_in.strip()
