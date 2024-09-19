@@ -1,4 +1,9 @@
 site_name: Write2Audiobook
+site_description: Project documentation for Write2Audiobook.
+
+repo_url: https://github.com/greg-martinez44/write2audiobook
+edit_uri: edit/gh-docs/docs/
+
 theme:
   name: material
   features:
@@ -8,11 +13,16 @@ theme:
     - content.tabs.link
     - content.code.annotate
     - content.code.copy
-repo_url: https://github.com/greg-martinez44/write2audiobook
-edit_uri: https://github.com/greg-martinez44/write2audiobook/edit/gh-docs/docs/
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.top
+
 nav:
   - Home: index.md
-  - Quick Start: quick-start.md
+  - Quick start: quick-start.md
+  - User guide:
+    - Convert text to audio: user-guide/text-to-audio.md
   - About:
     - Release Notes: about/release-notes.md
     - Contributing: about/contributing.md
@@ -26,3 +36,5 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
+  - toc:
+      permalink: true

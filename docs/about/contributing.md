@@ -1,4 +1,7 @@
-# Contributing
+---
+title: Contributing
+description: Contributing guidelines for the Write2Audiobook project.
+---
 
 We welcome contributions!
 

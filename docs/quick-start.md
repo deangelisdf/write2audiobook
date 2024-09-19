@@ -1,4 +1,7 @@
-# Quick start guide
+---
+title: Quick start guide
+description: A tutorial for the Write2Audiobook project.
+---
 
 Follow this tutorial to learn how to use Write2Audiobook.
 
@@ -28,7 +31,7 @@ Activate your virtual environment.
 
 === "Command Prompt"
     ```bat
-    .venv\Scripts\Activate.bat
+    .venv\Scripts\activate.bat
     ```
 
 === "Linux or macOS"
