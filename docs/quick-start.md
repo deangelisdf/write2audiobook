@@ -14,8 +14,32 @@ git clone https://github.com/deangelisdf/write2audiobook.git
 
 To keep your workspace clean and to prevent conflicts with previously installed libraries, create a virtual environment.
 
+```bash
+python -m venv .venv
+```
+
+If you are on a Windows system, run the following command to activate your virtual environment:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+If you are on a macOS or Linux system, run the following command to activate your virtual environment:
+
+```bash
+source .venv/bin/activate
+```
+
+## Install required libraries
+
+Use `pip` to install the required libraries in your virtual environment.
+
+```bash
+python -m pip install -r requirements
+```
+
 NOTE:
-If you're on a Linux system, you must install additional packages:<br>
+If you're on a Linux system, you must install additional system packages:<br>
     ```
     sudo apt update && sudo apt install espeak ffmpeg libespeak1 -y
     ```
