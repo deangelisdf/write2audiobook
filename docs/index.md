@@ -7,4 +7,5 @@ Write2Audiobook is a powerful tool that converts EPUB, TXT, PPT, and DOCX docume
 from the command-line. This tool is perfect for making reading more accessible for people with visual impairments and
 for those who simply prefer listening on the go.
 
-To see Write2Audiobook in action, check out the [Quick start guide](quick-start.md).
+To see Write2Audiobook in action, check out the [Quick start guide](quick-start.md). Then go to the
+[User guide](user-guide/text-to-audio.md) to learn more.
