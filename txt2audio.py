@@ -15,12 +15,8 @@ from frontend import input_tool
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-if sys.platform in ("win32", "cygwin"):
-    BACK_END_TTS = "EDGE_TTS"
-elif sys.platform == "darwin":
-    BACK_END_TTS = '"GTTS'
-else:
-    BACK_END_TTS = "PYTTS"
+BACK_END_TTS = m4b.get_back_end_tts()
+
 LANGUAGE = "it"
 
 def main():
