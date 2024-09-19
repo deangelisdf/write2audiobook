@@ -5,7 +5,9 @@ Goal: generate metadata to inject in m4b format file
 import audio_metadata
 
 def generate_ffmetadata(input_audio_paths:list,
-                        chapter_titles:list=None) -> str:
+                        chapter_titles:list=None,
+                        author:str=None,
+                        title:str=None) -> str:
     """Generate metadata in ffmpeg format
     Args:
         input_audio_paths: List[str] - path of audiable files
@@ -26,6 +28,12 @@ def generate_ffmetadata(input_audio_paths:list,
     # "If the timebase is missing then start/end times are assumed to be in 𝗻𝗮𝗻𝗼𝘀𝗲𝗰𝗼𝗻𝗱𝘀."
     # "chapter start and end times in form ‘START=num’, ‘END=num’, where num is a 𝗽𝗼𝘀𝗶𝘁𝗶𝘃𝗲 𝗶𝗻𝘁𝗲𝗴𝗲𝗿."
     metadata = ""
+    if author or title:
+        metadata = ";FFMETADATA1"
+        if author:
+            metadata = f"{metadata}\nartist={author}"
+        if title:
+            metadata = f"{metadata}\ntitle={title}"
     last_end = 0
     for idx, start_time in enumerate(starttimes):
         metadata += f"[CHAPTER]\nSTART={last_end}\nEND={start_time}\n"
