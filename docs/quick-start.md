@@ -1,19 +1,21 @@
-# Quick start guide for Write2Audiobook
+# Quick start guide
 
 Follow this tutorial to learn how to use Write2Audiobook.
 
-## Prequisites
+## Clone the repository
 
-Before you begin, clone the repository and install the packages from the `requirements` file.
+Clone the repository to your computer.
 
 ```bash
 git clone https://github.com/deangelisdf/write2audiobook.git
-cd write2audiobook
-python3 -m pip install -r requirements
 ```
 
+## Create a virtual environment
+
+To keep your workspace clean and to prevent conflicts with previously installed libraries, create a virtual environment.
+
 NOTE:
-If you're on a linux system, you must install additional packages:<br>
+If you're on a Linux system, you must install additional packages:<br>
     ```
     sudo apt update && sudo apt install espeak ffmpeg libespeak1 -y
     ```
@@ -32,7 +34,7 @@ To convert a plain text file to an audiobook:
 python3 txt2audio.py text.txt
 ```
 
-To convert a PowerPoint presentation (PPTX file) to an audiobook:
+To convert a PowerPoint presentation (PPTX) to an audiobook:
 
 ```bash
 python3 pptx2audio.py presentation.pptx
@@ -46,7 +48,7 @@ python3 docx2audio.py document.docx
 
 ## Enjoy your audiobook
 
-Write2Audio saves your audiobook as an MP3 file in your current directory. It will have the same name as the file you converted.
+Write2Audio saves your audiobook as an MP3 file in the current directory. It will have the same name as the converted file.
 
 ```bash
 python3 txt2audio.py test.txt
