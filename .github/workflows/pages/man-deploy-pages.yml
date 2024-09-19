@@ -1,0 +1,15 @@
+name: deploy-pages
+
+on:
+  push:
+    branches: ["main", "gh-docs"]
+    paths: ["docs/**", "mkdocs.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/pages/deploy-pages.yml

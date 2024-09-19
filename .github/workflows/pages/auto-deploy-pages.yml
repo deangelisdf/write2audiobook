@@ -1,0 +1,15 @@
+name: deploy-pages-from-pr
+
+on:
+  pull_request:
+    types: ["closed"]
+    paths: ["docs/**", "mkdocs.yml"]
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged
+    uses: ./.github/workflows/pages/deploy-pages.yml
