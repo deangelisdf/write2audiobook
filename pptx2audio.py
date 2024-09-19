@@ -24,7 +24,7 @@ elif sys.platform == "darwin":
 else:
     BACK_END_TTS = "PYTTS"
 LANGUAGE_DICT = {"it-IT":"it"}
-LANGUAGE_DICT_PYTTS = {"it-IT":"italian", "en":"english"}
+LANGUAGE_DICT_PYTTS = {"it":"italian", "en":"english"}
 
 def __get_notes(note: slide.NotesSlide) -> str:
     print(note)
