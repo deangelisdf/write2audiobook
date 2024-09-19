@@ -92,6 +92,7 @@ def extract_chapter_and_generate_mp3(tree:etree._ElementTree,
                                      mp3_temp_dir:str,
                                      content_file_dir_path:str,
                                      guide:dict):
+    """extract id reference from container.xml file and extract chapter text"""
     chapters = []
     for idref in tree.xpath("//*[local-name()='package']"
                             "/*[local-name()='spine']"
@@ -121,8 +122,8 @@ def main():
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
         logger.info("Parsing 'container.xml' file.")
-        containerFilePath=os.path.join(tmp_dir, "META-INF/container.xml")
-        tree = etree.parse(containerFilePath)
+        container_file_path=os.path.join(tmp_dir, "META-INF/container.xml")
+        tree = etree.parse(container_file_path)
         for root_file_path in tree.xpath( "//*[local-name()='container']"
                                         "/*[local-name()='rootfiles']"
                                         "/*[local-name()='rootfile']"
@@ -141,8 +142,8 @@ def main():
                                                              content_file_dir_path,
                                                              guide)
                 metadata_output = ffmetadata_generator.generate_ffmetadata(chapters,
-                                                                        title=metadata_book_output["title"],
-                                                                        author=metadata_book_output["author"])
+                                                            title=metadata_book_output["title"],
+                                                            author=metadata_book_output["author"])
                 with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
                     file_ffmetadata.write(metadata_output)
                 m4b.generate_m4b(output_file_path, chapters, "ffmetada")
