@@ -5,6 +5,7 @@ description: starting from epub file generate a m4b file
 Usage example:
     python ebook2audio.py book.epub
 """
+import sys
 import zipfile
 import tempfile
 import os
@@ -19,7 +20,12 @@ from frontend import input_tool
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+if sys.platform in ("win32", "cygwin"):
+    BACK_END_TTS = "EDGE_TTS"
+elif sys.platform == "darwin":
+    BACK_END_TTS = '"GTTS'
+else:
+    BACK_END_TTS = "PYTTS"
 
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     """Unzip the epub file and extract all in a temp directory"""
