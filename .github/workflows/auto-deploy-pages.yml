@@ -7,6 +7,9 @@ on:
     paths: ["docs/**", "mkdocs.yml"]
 
 jobs:
-  call-deploy-job:
+  receive-pull-request:
     if: github.event.pull_request.merged
-    uses: ./.github/workflows/deploy-pages.yml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm run
+        run: echo "Workflow run on ${{ github.event.number }}"
