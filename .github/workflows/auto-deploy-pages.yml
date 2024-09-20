@@ -2,6 +2,7 @@ name: deploy-pages-from-pr
 
 on:
   pull_request:
+    branches: main
     types: ["closed"]
     paths: ["docs/**", "mkdocs.yml"]
 

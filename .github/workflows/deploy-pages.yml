@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout doc files
         uses: actions/checkout@v4
-        with:
-          ref: gh-docs
       - name: Setup python
         uses: actions/setup-python@v5
         with:

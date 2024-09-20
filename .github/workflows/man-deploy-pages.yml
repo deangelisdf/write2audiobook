@@ -2,7 +2,7 @@ name: deploy-pages-from-push
 
 on:
   push:
-    branches: ["main", "gh-docs"]
+    branches: main
     paths: ["docs/**", "mkdocs.yml", ".github/workflows/**"]
   workflow_dispatch:
 
