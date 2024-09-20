@@ -137,7 +137,7 @@ def extract_chapter_and_generate_mp3(tree:etree._ElementTree,
         tree: The base of the XML tree in epub contents.
         output_file_path: The path to save the result MP3 file.
         mp3_temp_dir: The temporary directory path to save MP3 files as the XML tree is parsed.
-        content_dir_path: The path to the XML file.
+        content_file_dir_path: The path to the XML file.
         guide: A map of the guide XML node types and their hyperlink content.
 
     Returns:

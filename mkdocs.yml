@@ -67,3 +67,5 @@ plugins:
             parameter_headings: true
             docstring_section_style: list
             show_root_heading: true
+
+exclude_docs: how-to-contribute-to-docs.md
