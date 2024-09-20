@@ -1,13 +1,16 @@
 #!/usr/bin/python3
 """
-file: docx2audio.py
-description: Convert your docx to audiobook in M4B format
+file: [docx2audio.py](https://github.com/deangelisdf/write2audiobook/blob/main/docx2audio.py)
+
+description: Convert your docx file to audiobook in MP3 format.
+
 Usage example:
-    python docx2audio.py document.docx
+    `python docx2audio.py document.docx`
 """
+
 import os
 import logging
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Generator
 from docx import Document
 from docx.document import Document as _Document
 from docx.oxml.text.paragraph import CT_P
@@ -29,13 +32,21 @@ TITLE_TOKENS   = ('Heading 1', 'Title', 'Titolo')
 LIST_ITEM_TOKEN= 'List Paragraph'
 CHAPTER_TOKEN  = 'Heading 2'
 
-def iter_block_items(parent:Union[Document, _Cell, _Row]):
+def iter_block_items(
+    parent:Union[Document, _Cell, _Row]
+) -> Generator[Union[Paragraph, Table], None, None]:
     """
     Generate a reference to each paragraph and table child within *parent*,
     in document order. Each returned value is an instance of either Table or
     Paragraph. *parent* would most commonly be a reference to a main
     Document object, but also works for a _Cell object, which itself can
     contain paragraphs and tables.
+
+    Arguments:
+        parent: The main Word document object, or an individual `_Cell` object.
+    
+    Yields:
+        A Paragraph or Table object.
     """
     if isinstance(parent, _Document):
         parent_elm = parent.element.body
@@ -54,8 +65,16 @@ def iter_block_items(parent:Union[Document, _Cell, _Row]):
 def extract_chapters(doc:Document,
                      style_start_chapter_name:Tuple[str] = TITLE_TOKENS
                      ) -> List[Union[Paragraph, Table]]:
-    """extract chapters as list of paragraphs and table, the chapter are structured as
-    Title (with style like Heading1 and Title) and corpus (other styles)"""
+    """Extract chapters as list of paragraphs and table, the chapter are structured as
+    Title (with style like Heading1 and Title) and corpus (other styles).
+
+    Arguments:
+        doc: The main Word document item.
+        style_start_chapter_name: Possible identifiers for titles in the Word document.
+    
+    Returns:
+        A list of Paragraph or Table objects.
+    """
     temp_chapters: List[List[Union[Paragraph, Table]]] = []
     temp:List[Union[Paragraph, Table]] = []
     for block in iter_block_items(doc):
@@ -70,9 +89,17 @@ def extract_chapters(doc:Document,
     return [i for i in temp_chapters if len(i)>0]
 
 def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
-                          language="it-IT") -> Tuple[str, str]:
+                          language:str="it-IT") -> Tuple[str, str]:
     """Generate an intermediate representation in textual version,
-    starting from docx format to pure textual, adding sugar context informations."""
+    starting from docx format to pure textual, adding sugar context information.
+
+    Arguments:
+        chapter_doc: A list of Paragraphs and Tables.
+        language: The desired language abbreviation.
+
+    Returns:
+        A tuple of the object's title and its text content.
+    """
     title_str = chapter_doc[0].text
     text = f"{TITLE_KEYWORD[language]}: {title_str}.\n"
     idx_list = 0

@@ -8,11 +8,13 @@ def generate_ffmetadata(input_audio_paths:list,
                         chapter_titles:list=None,
                         author:str=None,
                         title:str=None) -> str:
-    """Generate metadata in ffmpeg format
-    Args:
+    """Generate metadata in ffmpeg format.
+
+    Arguments:
         input_audio_paths: List[str] - path of audiable files
         chapter_titles:    List[str] - name of chapters defined on each files
-    Return:
+
+    Returns:
         metadata: str
     """
     starttimes=[]

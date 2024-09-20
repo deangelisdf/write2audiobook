@@ -1,0 +1,11 @@
+name: deploy-pages-from-push
+
+on:
+  push:
+    branches: main
+    paths: ["docs/**", "mkdocs.yml", ".github/workflows/**"]
+  workflow_dispatch:
+
+jobs:
+  call-deploy-job:
+    uses: ./.github/workflows/deploy-pages.yml
