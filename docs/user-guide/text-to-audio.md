@@ -15,7 +15,7 @@ This page explains how to use the `txt2audio.py` script to convert plain text fi
 
 To convert a TXT file to an MP3 file:
 
-1. [Download the script](./installation.md) and then [install the required libraries](./install-libraries.md).
+1. [Download the script](./download-scripts.md) and then [install the required libraries](./install-libraries.md).
 1. In your terminal, go to the Write2Audiobook project's root directory.
 
     ```console

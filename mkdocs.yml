@@ -17,17 +17,27 @@ theme:
     - navigation.tabs.sticky
     - navigation.path
     - navigation.top
+    - navigation.indexes
 
 nav:
   - Home: index.md
   - Quick start: quick-start.md
   - User guide:
+    - user-guide/index.md
     - Download the scripts: user-guide/download-scripts.md
     - Install libraries: user-guide/install-libraries.md
     - Text files: user-guide/text-to-audio.md
     - Word documents: user-guide/docx-to-audio.md
     - PowerPoint presentations: user-guide/pptx-to-audio.md
     - Ebooks: user-guide/ebook-to-audio.md
+  - Reference:
+    - reference/index.md
+    - backend_audio: reference/backend-audio.md
+    - frontend: reference/frontend.md
+    - docx2audio: reference/docx2audio.md
+    - ebook2audio: reference/ebook2audio.md
+    - pptx2audio: reference/pptx2audio.md
+    - txt2audio: reference/txt2audio.md
   - About:
     - Release Notes: about/release-notes.md
     - Contributing: about/contributing.md
@@ -43,3 +53,17 @@ markdown_extensions:
       alternate_style: true
   - toc:
       permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: true
+            docstring_section_style: list
+            heading_level: 2
+            parameter_headings: true
+            docstring_section_style: list
+            show_root_heading: true

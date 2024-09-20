@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 """
-file: txt2audio.py
-description: Convert your txt (UTF-8) to audiobook in M4B format
+file: [txt2audio.py](https://github.com/deangelisdf/write2audiobook/blob/main/txt2audio.py)
+
+description: Convert your txt (UTF-8) to audiobook in MP3 format.
+
 Usage example:
-    python txt2audio.py document.txt
+    `python txt2audio.py document.txt`
 """
+
 import sys
 import os
 import logging
