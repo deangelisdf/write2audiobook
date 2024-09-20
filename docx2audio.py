@@ -32,7 +32,9 @@ TITLE_TOKENS   = ('Heading 1', 'Title', 'Titolo')
 LIST_ITEM_TOKEN= 'List Paragraph'
 CHAPTER_TOKEN  = 'Heading 2'
 
-def iter_block_items(parent:Union[Document, _Cell, _Row]) -> Generator[Union[Paragraph, Table], None, None]:
+def iter_block_items(
+    parent:Union[Document, _Cell, _Row]
+) -> Generator[Union[Paragraph, Table], None, None]:
     """
     Generate a reference to each paragraph and table child within *parent*,
     in document order. Each returned value is an instance of either Table or
@@ -92,7 +94,7 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
     starting from docx format to pure textual, adding sugar context information.
 
     Arguments:
-        chapter_doc: A list of Paragraphs and Tables. Comprises the text in the original Word document.
+        chapter_doc: A list of Paragraphs and Tables.
         language: The desired language abbreviation.
 
     Returns:
