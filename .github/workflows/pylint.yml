@@ -21,4 +21,4 @@ jobs:
         if [ -f requirements ]; then pip install -r requirements; fi
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        pylint --load-plugins=pylint.extensions.mccabe $(git ls-files '*.py') --max-complexity=6
