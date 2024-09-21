@@ -1,29 +1,49 @@
 #!/usr/bin/python3
-import sys
+"""
+file: [ebook2audio.py](https://github.com/deangelisdf/write2audiobook/blob/main/ebook2audio.py)
+
+description: Convert your epub file to audiobook in MP3 format.
+
+Usage example:
+    `python ebook2audio.py book.epub`
+"""
+
 import zipfile
 import tempfile
 import os
 import logging
 import codecs
-import asyncio
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from lxml   import etree
 from backend_audio import m4b
 from backend_audio import ffmetadata_generator
+from frontend import input_tool
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACK_END_TTS = "EDGE_TTS"
+BACK_END_TTS = m4b.get_back_end_tts()
 
 def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
-    """Unzip the epub file and extract all in a temp directory"""
-    logger.debug("Extracting input to temp directory %s." % directory_to_extract_path)
+    """Unzip the epub file and extract all in a temp directory.
+
+    Arguments:
+        epub_path: The path to the epub file.
+        directory_to_extract_path: The temp directory to extract epub file to.
+    """
+    logger.debug("Extracting input to temp directory %s.", directory_to_extract_path)
     with zipfile.ZipFile(epub_path, 'r') as zip_ref:
         zip_ref.extractall(directory_to_extract_path)
 
-def get_guide_epub(root_tree:etree.ElementBase) -> Dict[str,str]:
-    """Get information about the guide information, described in content.opf file"""
+def get_guide_epub(root_tree: etree.ElementBase) -> Dict[str,str]:
+    """Get information about the guide information, described in content.opf file.
+
+    Arguments:
+        root_tree: The base of the XML tree in epub contents.
+
+    Returns:
+        A map of the guide XML node types and their hyperlink content.
+    """
     guide_res = {}
     for reference in root_tree.xpath("//*[local-name()='package']"
                                 "/*[local-name()='guide']"
@@ -31,25 +51,15 @@ def get_guide_epub(root_tree:etree.ElementBase) -> Dict[str,str]:
         guide_res[reference.attrib['type']] = reference.attrib['href']
     return guide_res
 
-def generate_audio(text_in:str, out_mp3_path:str, *, lang:str="it-IT") -> bool:
-    """Generating audio using tts apis"""
-    ret_val = True
-    text_in = text_in.strip()
-    if len(text_in) == 0:
-        return False
-    if BACK_END_TTS == "GTTS":
-        ret_val = m4b.generate_audio_gtts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "PYTTS":
-        ret_val = m4b.generate_audio_pytts(text_in, out_mp3_path, lang=lang)
-    elif BACK_END_TTS == "EDGE_TTS":
-        loop_audio = asyncio.get_event_loop_policy().get_event_loop()
-        #try:
-        loop_audio.run_until_complete(m4b.generate_audio_edge_tts(text_in, out_mp3_path, lang=lang))
-        #finally:
-        #    loop_audio.close()
-    return ret_val
 def prepocess_text(text_in:str) -> str:
-    """Remove possible character not audiable"""
+    """Remove possibly non-audible characters.
+
+    Arguments:
+        text_in: The epub file's text.
+
+    Returns:
+        The processed epub file's text.
+    """
     text_out = codecs.decode(bytes(text_in, encoding="utf-8"), encoding="utf-8")
     text_out = text_out.replace('\xa0', '')
     text_out = text_out.replace('\r\n\t', '')
@@ -57,10 +67,20 @@ def prepocess_text(text_in:str) -> str:
     return text_out.strip()
 
 def get_text_from_chapter(root_tree:etree._ElementTree,
-                          idref_ch:str, content_dir_path:str,
+                          idref_ch :str, content_dir_path:str,
                           guide_manifest:Dict[str,str]) -> Tuple[str, Dict[str,str]]:
     """Starting from content.opf xml tree, extract chapter html path
-       and parse it to achieve the chapter"""
+       and parse it to achieve the chapter.
+  
+    Arguments:
+        root_tree: The base of the XML tree in epub contents.
+        idref_ch: The XML ID of the chapter.
+        content_dir_path: The path to the XML file.
+        guide_manifest: A map of the guide XML node types and their hyperlink content.
+
+    Returns:
+        A tuple of the chapter's text and an empty dictionary.
+    """
     text_result = ""
     for href in root_tree.xpath( f"//*[local-name()='package']"
                             f"/*[local-name()='manifest']"
@@ -68,7 +88,7 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
                             f"/@href"):
         if href in guide_manifest.values():
             #Skip the chapter used as guide
-            logging.debug(f"skipping {href}")
+            logging.debug("skipping %s", href)
             continue
         xhtml_file_path = os.path.join(content_dir_path, href)
         subtree = etree.parse(xhtml_file_path, etree.HTMLParser())
@@ -79,9 +99,16 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
     return text_result, {}
 
 def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
-    """Extract basic metadata, as title, author and copyrights infos from content.opf"""
+    """Extract basic metadata, as title, author and copyrights infos from content.opf.
+
+    Arguments:
+        root_tree: The base of the XML tree in epub contents.
+
+    Returns:
+        A mapping of node titles and their vlaues from the root_tree.
+    """
     metadata_leaf = root_tree.xpath("//*[local-name()='package']/*[local-name()='metadata']")[0]
-    metadata_result = {}
+    metadata_result = {"title":"", "author":""}
     namespace = metadata_leaf.nsmap
     if None in namespace.keys():
         del namespace[None]
@@ -94,55 +121,84 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
     rights = metadata_leaf.xpath("//dc:rights", namespaces=namespace)
     if len(rights)>0:
         metadata_result["copyright"] = rights[0].text
+    descr = metadata_leaf.xpath("//dc:description", namespaces=namespace)
+    if len(rights)>0:
+        metadata_result["description"] = descr[0].text
     return metadata_result
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        logger.error("Usage: {} <input.epub>".format(sys.argv[0]))
-        exit(1)
-    input_file_path=sys.argv[1]
-    output_file_path=os.path.join(os.path.dirname(__file__),
-                                  os.path.basename(input_file_path)[:-len(".epub")]) + ".m4b"
+def extract_chapter_and_generate_mp3(tree:etree._ElementTree,
+                                     output_file_path:str,
+                                     mp3_temp_dir:str,
+                                     content_file_dir_path:str,
+                                     guide:Dict[str,str]) -> List[str]:
+    """Extract id reference from container.xml file and extract chapter text.
+
+    Arguments:
+        tree: The base of the XML tree in epub contents.
+        output_file_path: The path to save the result MP3 file.
+        mp3_temp_dir: The temporary directory path to save MP3 files as the XML tree is parsed.
+        content_file_dir_path: The path to the XML file.
+        guide: A map of the guide XML node types and their hyperlink content.
+
+    Returns:
+        A list of the saved MP3 file paths.
+    """
     chapters = []
-    metadata_book_output = {}
-    ch_metadatas = []
+    for idref in tree.xpath("//*[local-name()='package']"
+                            "/*[local-name()='spine']"
+                            "/*[local-name()='itemref']"
+                            "/@idref"):
+        output_debug_path= os.path.join(os.path.dirname(output_file_path),
+                                        f"{mp3_temp_dir}/{idref}.log")
+        output_mp3_path  = os.path.join(os.path.dirname(output_file_path),
+                                        f"{mp3_temp_dir}/{idref}.mp3")
+        text_chapther, _ = get_text_from_chapter(tree, idref,
+                                                content_file_dir_path,
+                                                guide)
+        logger.info("idref %s", idref)
+        text_chapther = prepocess_text(text_chapther)
+        with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
+            out_debug_file.write(text_chapther)
+        if m4b.generate_audio(text_chapther, output_mp3_path, backend=BACK_END_TTS):
+            chapters.append(output_mp3_path)
+    return chapters
+
+def main():
+    """main function"""
+    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
+    chapters = []
 
     m4b.init(BACK_END_TTS)
-    
     with tempfile.TemporaryDirectory() as tmp_dir:
         extract_by_epub(input_file_path, tmp_dir)
-        logger.info(f"Parsing 'container.xml' file.")
-        containerFilePath=os.path.join(tmp_dir, "META-INF/container.xml")
-        tree = etree.parse(containerFilePath)
+        logger.info("Parsing 'container.xml' file.")
+        container_file_path=os.path.join(tmp_dir, "META-INF/container.xml")
+        tree = etree.parse(container_file_path)
         for root_file_path in tree.xpath( "//*[local-name()='container']"
                                         "/*[local-name()='rootfiles']"
                                         "/*[local-name()='rootfile']"
                                         "/@full-path"):
-            logger.info(f"Parsing '{root_file_path}' file.")
+            logger.info("Parsing '%s' file.", root_file_path)
             content_file_path = os.path.join(tmp_dir, root_file_path)
             content_file_dir_path = os.path.dirname(content_file_path)
             tree = etree.parse(content_file_path)
             guide = get_guide_epub(tree)
             metadata_book_output = get_metadata(tree)
-            logger.info(f"Parsed '{root_file_path}' file.")
-            for idref in tree.xpath("//*[local-name()='package']"
-                                    "/*[local-name()='spine']"
-                                    "/*[local-name()='itemref']"
-                                    "/@idref"):
-                output_debug_path= os.path.join(os.path.dirname(output_file_path), f"{idref}.log")
-                output_mp3_path  = os.path.join(os.path.dirname(output_file_path), f"{idref}.mp3")
-                #TODO get chapter title by toc.nx
-                text_chapther, metadata_ch = get_text_from_chapter(tree, idref, content_file_dir_path, guide)
-                logger.info(f"idref {idref}")
-                text_chapther = prepocess_text(text_chapther)
-                with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
-                    out_debug_file.write(text_chapther)
-                if generate_audio(text_chapther, output_mp3_path):
-                    chapters.append(output_mp3_path)
-    m4b.close_edge_tts()
-    metadata_output = ffmetadata_generator.generate_ffmetadata(chapters)
-    with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
-        file_ffmetadata.write(metadata_output)
-    m4b.generate_m4b(output_file_path, chapters, "ffmetada")
+            logger.info("Parsed '%s' file.", root_file_path)
+            with tempfile.TemporaryDirectory() as mp3_temp_dir:
+                chapters += extract_chapter_and_generate_mp3(tree,
+                                                             output_file_path,
+                                                             mp3_temp_dir,
+                                                             content_file_dir_path,
+                                                             guide)
+                metadata_output = ffmetadata_generator.generate_ffmetadata(chapters,
+                                                            title=metadata_book_output["title"],
+                                                            author=metadata_book_output["author"])
+                with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
+                    file_ffmetadata.write(metadata_output)
+                m4b.generate_m4b(output_file_path, chapters, "ffmetada")
+
+if __name__ == "__main__":
+    main()
 
 __author__ = "de angelis domenico francesco"

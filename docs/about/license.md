@@ -1,4 +1,18 @@
-MIT License
+---
+title: License
+description: Copyright information for the Write2Audiobook project.
+---
+
+Copyright information for the Write2Audiobook project.
+
+## Included projects
+
+- Material theme - [View license](https://github.com/squidfunk/mkdocs-material/blob/master/LICENSE).
+- MkDocs site generator - [View license](https://github.com/mkdocs/mkdocs/blob/master/LICENSE)
+
+Many thanks to the authors and contributors of those wonderful projects.
+
+## Write2Audiobook license (MIT)
 
 Copyright (c) 2023 De Angelis Domenico Francesco
 

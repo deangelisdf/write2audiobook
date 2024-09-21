@@ -1,0 +1,14 @@
+name: deploy-pages-from-push
+
+on:
+  push:
+    branches: main
+    paths: ["docs/**", "mkdocs.yml", ".github/workflows/**"]
+  workflow_dispatch:
+
+jobs:
+  receive-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm run
+        run: echo "Workflow run on ${{ github.event.head_commit.id }}"

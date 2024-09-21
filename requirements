@@ -5,4 +5,4 @@ ffmpeg-python
 lxml
 python-docx
 python-pptx
-audio_metadata
+tinytag
