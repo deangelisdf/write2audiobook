@@ -29,11 +29,20 @@ TITLE_TOKENS   = ('Heading 1', 'Title', 'Titolo')
 LIST_ITEM_TOKEN= 'List Paragraph'
 CHAPTER_TOKEN  = 'Heading 2'
 TABLE_VERBOSITY = {
-    'start_table': "Starting table reading...",
-    'end_table': "Finished reading table.",
-    'row_processed': "Processed row: {}",
-    'cell_processed': "Processed cell: {}"
+    'en': {
+        'start_table': "Starting table reading...",
+        'cell_processed': "Processed cell {0}",
+        'row_processed': "Processed row {0}",
+        'end_table': "Finished table reading."
+    },
+    'it-IT': {
+        'start_table': "Inizio lettura della tabella...",
+        'cell_processed': "Cella {0} elaborata",
+        'row_processed': "Riga {0} elaborata",
+        'end_table': "Lettura della tabella completata."
+    }
 }
+
 
 def iter_block_items(parent:Union[Document, _Cell, _Row]):
     """
@@ -100,6 +109,7 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
     title_str = chapter_doc[0].text
     text = f"{TITLE_KEYWORD[language]}: {title_str}.\n"
     idx_list = 0
+    verbosity_msgs = TABLE_VERBOSITY.get(language, TABLE_VERBOSITY['en'])  
     for block in chapter_doc[1:]:
         if isinstance(block, Paragraph):
             if block.style.name == LIST_ITEM_TOKEN:
@@ -112,25 +122,35 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
             text += f"{block.text}\n"
         elif isinstance(block, Table):
             if verbose:
-                logger.info(TABLE_VERBOSITY['start_table'])
-            
+                log_message = verbosity_msgs['start_table']
+                logger.info(log_message)
+                text += f"{log_message}\n"
+
             for row_index, row in enumerate(block.rows):
                 row_data = []
                 for cell_index, cell in enumerate(row.cells):
                     for paragraph in cell.paragraphs:
                         row_data.append(paragraph.text)
-                    
+
                     if verbose:
-                        logger.info(TABLE_VERBOSITY['cell_processed'].format(cell_index))
-                
-                text += "{}\n".format('\t'.join(row_data))
-                
+                        cell_message = verbosity_msgs['cell_processed'].format(cell_index)
+                        logger.info(cell_message)
+                        text += f"{cell_message}\n"
+
+                row_text = '\t'.join(row_data)
+                text += f"{row_text}\n"
                 if verbose:
-                    logger.info(TABLE_VERBOSITY['row_processed'].format(row_index))
-            
+                    row_message = verbosity_msgs['row_processed'].format(row_index)
+                    logger.info(row_message)
+                    text += f"{row_message}\n"
+
             if verbose:
-                logger.info(TABLE_VERBOSITY['end_table'])
+                end_message = verbosity_msgs['end_table']
+                logger.info(end_message)
+                text += f"{end_message}\n"
+
     return text, title_str
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
