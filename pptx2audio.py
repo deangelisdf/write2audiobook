@@ -10,6 +10,7 @@ Usage example:
 import os
 import logging
 import pptx
+import pptx.parts.image
 from pptx import presentation, slide
 from backend_audio import m4b
 from frontend import input_tool
@@ -22,6 +23,16 @@ LANGUAGE = "it"
 
 TOK_NUM_SLIDES = {"it":"Numero slide:", "en":"slide number: "}
 TOK_SLIDE_NOTE = {"it":"Note:", "en":"Note:"}
+
+def save_image_from_pptx(image:pptx.parts.image.Image, folder_path:str) -> None:
+    """Save an image to disk.
+    Arguments:
+        image: The image to save.
+       folder_path: the directory where we want save the image.
+    """
+    filename = f"{folder_path}/{image.filename}.{image.ext}"
+    with open(filename, 'wb') as f:
+        f.write(image.blob)
 
 def __get_notes(note: slide.NotesSlide) -> str:
     print(note)
@@ -59,10 +70,10 @@ def extract_pptx_text(path_pptx:str,
 
 def main():
     """main function"""
-    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
+    input_file_path, out_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__))
     m4b.init(BACK_END_TTS)
     text=extract_pptx_text(input_file_path)
-    m4b.generate_audio(text, output_file_path, lang=LANGUAGE, backend=BACK_END_TTS)
+    m4b.generate_audio(text, out_file_path, lang=language, backend=BACK_END_TTS)
 
 if __name__ == "__main__":
     main()

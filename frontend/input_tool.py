@@ -11,6 +11,8 @@ from typing import Tuple
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
+SUPPORTED_LANGUAGE = ["it", "en"]
+
 def get_sys_input(main_path:str, format_output:str="m4b") -> Tuple[str, str]:
     """Get input and output path files.
 
@@ -22,11 +24,13 @@ def get_sys_input(main_path:str, format_output:str="m4b") -> Tuple[str, str]:
         A tuple of the file supplied by the user at the 
         command-line and the path the result file is saved to.
     """
-    if len(sys.argv) != 2:
-        logger.error("Usage: %s <input.docx>",sys.argv[0])
+    if len(sys.argv) != 3:
+        logger.error("Usage: %s <input.docx> <language>",sys.argv[0])
         sys.exit(1)
     input_file_path  = sys.argv[1]
+    language         = sys.argv[2]
     output_file_name = Path(input_file_path).stem
     output_file_path = os.path.join(main_path,
                                     output_file_name) + f".{format_output}"
-    return input_file_path, output_file_path
+    assert language in SUPPORTED_LANGUAGE
+    return input_file_path, output_file_path, language

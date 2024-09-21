@@ -156,7 +156,7 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
     return text, title_str
 
 if __name__ == "__main__":
-    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
+    in_file_path, out_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
     chapters_path: List[str] = []
     title_list:List[str] = []
@@ -165,23 +165,24 @@ if __name__ == "__main__":
 
     m4b.init(BACK_END_TTS)
 
-    document = Document(input_file_path)
+    document = Document(in_file_path)
     chapters = extract_chapters(document)
     for idref, chapter in enumerate(chapters):
-        output_debug_path = f"{input_file_path}.c{idref}.txt"
-        output_mp3_path   = f"{input_file_path}.c{idref}.mp3"
+        output_debug_path = f"{in_file_path}.c{idref}.txt"
+        output_mp3_path   = f"{in_file_path}.c{idref}.mp3"
         text_chapther, title = get_text_from_chapter(chapter)
         title_list.append(title)
         logger.info("idref %s", idref)
         with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
             out_debug_file.write(text_chapther)
-        if m4b.generate_audio(text_chapther, output_mp3_path, backend=BACK_END_TTS):
+        if m4b.generate_audio(text_chapther, output_mp3_path,
+                              lang=language, backend=BACK_END_TTS):
             chapters_path.append(output_mp3_path)
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters_path,
                                                                chapter_titles=title_list)
     with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
         file_ffmetadata.write(metadata_output)
-    m4b.generate_m4b(output_file_path, chapters_path, "ffmetada")
+    m4b.generate_m4b(out_file_path, chapters_path, "ffmetada")
     m4b.close_edge_tts()
 
 __author__ = "de angelis domenico francesco"
