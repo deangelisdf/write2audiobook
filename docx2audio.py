@@ -155,13 +155,12 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
             text += get_text_from_table(block, language)
     return text, title_str
 
-if __name__ == "__main__":
+def main():
+    """main function"""
     in_file_path, out_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
     chapters_path: List[str] = []
     title_list:List[str] = []
-    metadata_book_output = {}
-    ch_metadatas = []
 
     m4b.init(BACK_END_TTS)
 
@@ -184,5 +183,8 @@ if __name__ == "__main__":
         file_ffmetadata.write(metadata_output)
     m4b.generate_m4b(out_file_path, chapters_path, "ffmetada")
     m4b.close_edge_tts()
+
+if __name__ == "__main__":
+    main()
 
 __author__ = "de angelis domenico francesco"
