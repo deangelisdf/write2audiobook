@@ -9,6 +9,7 @@ Enhances accessibility for visually impaired users.<br>
 ## Requirements
 To get started, clone the repository and install the necessary dependencies:
 ```
+git clone https://github.com/deangelisdf/write2audiobook
 cd write2audiobook
 python3 -m pip install -r requirements.txt
 ```
