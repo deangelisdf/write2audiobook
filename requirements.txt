@@ -6,3 +6,4 @@ lxml
 python-docx
 python-pptx
 tinytag
+pypdf
