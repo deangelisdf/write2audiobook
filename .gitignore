@@ -156,6 +156,10 @@ cython_debug/
 *.mp4
 *.m4b
 
+#font format
+*.cff
+*.tff
+
 #document
 *.txt
 *.epub
