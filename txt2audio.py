@@ -24,7 +24,7 @@ LANGUAGE = "it"
 
 def main():
     """main function"""
-    _, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__),
+    _, output_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__),
                                                    format_output="mp3")
     text:str = ""
     with open(sys.argv[1], "r", encoding="UTF-8") as file:
@@ -32,11 +32,11 @@ def main():
 
     m4b.init(BACK_END_TTS)
     if BACK_END_TTS == "PYTTS":
-        m4b.generate_audio_pytts(text, output_file_path, lang=LANGUAGE)
+        m4b.generate_audio_pytts(text, output_file_path, lang=language)
     else:
         loop = asyncio.get_event_loop_policy().get_event_loop()
         try:
-            voices = loop.run_until_complete(m4b.get_voices_edge_tts(lang=LANGUAGE))
+            voices = loop.run_until_complete(m4b.get_voices_edge_tts(lang=language))
             voice = voices[0]["Name"]
             loop.run_until_complete(m4b.generate_audio_edge_tts(text, output_file_path,
                                                                 lang="it-IT", voice=voice))

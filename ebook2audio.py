@@ -126,11 +126,12 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
         metadata_result["description"] = descr[0].text
     return metadata_result
 
-def extract_chapter_and_generate_mp3(tree:etree._ElementTree,
+def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=R0913
                                      output_file_path:str,
                                      mp3_temp_dir:str,
                                      content_file_dir_path:str,
-                                     guide:Dict[str,str]) -> List[str]:
+                                     guide:Dict[str,str],
+                                     language:str) -> List[str]:
     """Extract id reference from container.xml file and extract chapter text.
 
     Arguments:
@@ -159,18 +160,19 @@ def extract_chapter_and_generate_mp3(tree:etree._ElementTree,
         text_chapther = prepocess_text(text_chapther)
         with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
             out_debug_file.write(text_chapther)
-        if m4b.generate_audio(text_chapther, output_mp3_path, backend=BACK_END_TTS):
+        if m4b.generate_audio(text_chapther, output_mp3_path,
+                              lang=language, backend=BACK_END_TTS):
             chapters.append(output_mp3_path)
     return chapters
 
 def main():
     """main function"""
-    input_file_path, output_file_path = input_tool.get_sys_input(os.path.dirname(__file__))
+    in_file_path, out_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__))
     chapters = []
 
     m4b.init(BACK_END_TTS)
     with tempfile.TemporaryDirectory() as tmp_dir:
-        extract_by_epub(input_file_path, tmp_dir)
+        extract_by_epub(in_file_path, tmp_dir)
         logger.info("Parsing 'container.xml' file.")
         container_file_path=os.path.join(tmp_dir, "META-INF/container.xml")
         tree = etree.parse(container_file_path)
@@ -187,16 +189,17 @@ def main():
             logger.info("Parsed '%s' file.", root_file_path)
             with tempfile.TemporaryDirectory() as mp3_temp_dir:
                 chapters += extract_chapter_and_generate_mp3(tree,
-                                                             output_file_path,
+                                                             out_file_path,
                                                              mp3_temp_dir,
                                                              content_file_dir_path,
-                                                             guide)
+                                                             guide,
+                                                             language)
                 metadata_output = ffmetadata_generator.generate_ffmetadata(chapters,
                                                             title=metadata_book_output["title"],
                                                             author=metadata_book_output["author"])
                 with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
                     file_ffmetadata.write(metadata_output)
-                m4b.generate_m4b(output_file_path, chapters, "ffmetada")
+                m4b.generate_m4b(out_file_path, chapters, "ffmetada")
 
 if __name__ == "__main__":
     main()

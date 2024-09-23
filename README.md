@@ -9,6 +9,7 @@ Enhances accessibility for visually impaired users.<br>
 ## Requirements
 To get started, clone the repository and install the necessary dependencies:
 ```
+git clone https://github.com/deangelisdf/write2audiobook
 cd write2audiobook
 python3 -m pip install -r requirements.txt
 ```
@@ -17,20 +18,21 @@ python3 -m pip install -r requirements.txt
 You can convert your documents to audiobooks using the following commands:<br>
 To convert an EPUB book to an audiobook:
 ```
-python3 ebook2audio.py book.epub
+python3 ebook2audio.py book.epub language
 ```
 To convert a plain text file to an audiobook:
 ```
-python3 txt2audio.py text.txt
+python3 txt2audio.py text.txt language
 ```
 To convert a PowerPoint presentation to an audiobook:
 ```
-python3 pptx2audio.py presentation.pptx
+python3 pptx2audio.py presentation.pptx language
 ```
 To convert a Word document to an audiobook:
 ```
-python3 docx2audio.py document.docx
+python3 docx2audio.py document.docx language
 ```
+where `language` supported is `it` stay for italian and `en` stay for english.
 ## Contributing
 We welcome contributions! If you'd like to contribute, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
