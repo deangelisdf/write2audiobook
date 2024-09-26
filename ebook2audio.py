@@ -126,7 +126,7 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
         metadata_result["description"] = descr[0].text
     return metadata_result
 
-def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=R0913
+def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=R0913,R0917
                                      output_file_path:str,
                                      mp3_temp_dir:str,
                                      content_file_dir_path:str,
@@ -197,9 +197,7 @@ def main():
                 metadata_output = ffmetadata_generator.generate_ffmetadata(chapters,
                                                             title=metadata_book_output["title"],
                                                             author=metadata_book_output["author"])
-                with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
-                    file_ffmetadata.write(metadata_output)
-                m4b.generate_m4b(out_file_path, chapters, "ffmetada")
+                m4b.generate_m4b(out_file_path, chapters, metadata_output)
 
 if __name__ == "__main__":
     main()

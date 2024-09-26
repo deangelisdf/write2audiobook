@@ -152,18 +152,21 @@ def __sub_audio(audio_generator:Callable[[str, str], bool],
             out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
             out.run()
 
-def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata_path: str) -> None:
+def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata: str) -> None:
     """Generate the final audiobook starting from MP3s and METADATAs.
     
     Arguments:
         output_path: The path to save the final audiobook.
         chapter_paths: The paths where each chapter was saved.
-        ffmetadata_path: The path of the ffmetadata file.
+        ffmetadata: The ffmetadata file content.
     """
     inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     # Build FFmpeg command for setting metadata
     out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0, audio_bitrate=BIT_RATE_HUMAN)
+    ffmetadata_path = "ffmetada"
+    with open(ffmetadata_path, "w", encoding="UTF-8") as file_ffmetadata:
+        file_ffmetadata.write(ffmetadata)
     out = out.global_args('-f', 'ffmetadata', '-i', ffmetadata_path)
     try:
         ffmpeg.run(out)
