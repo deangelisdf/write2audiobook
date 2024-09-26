@@ -7,3 +7,4 @@ python-docx
 python-pptx
 tinytag
 pypdf
+PyMuPDF
