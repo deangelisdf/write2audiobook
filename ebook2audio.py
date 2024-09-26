@@ -197,9 +197,7 @@ def main():
                 metadata_output = ffmetadata_generator.generate_ffmetadata(chapters,
                                                             title=metadata_book_output["title"],
                                                             author=metadata_book_output["author"])
-                with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
-                    file_ffmetadata.write(metadata_output)
-                m4b.generate_m4b(out_file_path, chapters, "ffmetada")
+                m4b.generate_m4b(out_file_path, chapters, metadata_output)
 
 if __name__ == "__main__":
     main()

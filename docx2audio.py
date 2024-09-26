@@ -178,9 +178,7 @@ def main():
             chapters_path.append(output_mp3_path)
     metadata_output = ffmetadata_generator.generate_ffmetadata(chapters_path,
                                                                chapter_titles=title_list)
-    with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
-        file_ffmetadata.write(metadata_output)
-    m4b.generate_m4b(out_file_path, chapters_path, "ffmetada")
+    m4b.generate_m4b(out_file_path, chapters_path, metadata_output)
     m4b.close_edge_tts()
 
 if __name__ == "__main__":

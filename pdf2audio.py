@@ -74,7 +74,7 @@ def filter_reference(text_with_ref:str)->str:
         str: the string contain all text without refences"""
     return REGEX_REFERENCE.sub('', text_with_ref)
 
-def get_chapter_text(pdf_doc:utils.pymupdf.Document, pattern_header:str, pattern_footer:str)->list:#pylint: disable=R0914
+def get_chapter_text(pdf_doc:utils.pymupdf.Document, pattern_header:str, pattern_footer:str)->list:#pylint: disable=R0914,R1260
     """..."""
     extracted_text = []
     block_prediction = ""
@@ -161,9 +161,7 @@ def main():#pylint: disable=R0914
                                                 chapter_titles=chapter_titles,
                                                 title=metadata["title"],
                                                 author=metadata["author"])
-    with open("ffmetada", "w", encoding="UTF-8") as file_ffmetadata:
-        file_ffmetadata.write(metadata_output)
-    m4b.generate_m4b(out_file_path, chapters, "ffmetada")
+    m4b.generate_m4b(out_file_path, chapters, metadata_output)
 
 if __name__ == "__main__":
     main()
