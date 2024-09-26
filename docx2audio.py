@@ -148,7 +148,7 @@ def get_text_from_table(block: Table, language:str) -> str: #pylint: disable=W06
     return text
 
 def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
-                          language="it-IT", verbose = False) -> Tuple[str, str]:
+                          language=LANGUAGE, verbose = False) -> Tuple[str, str]:
 
     """Generate an intermediate representation in textual version,
     starting from docx format to pure textual, adding sugar context information.
