@@ -39,7 +39,7 @@ TABLE_VERBOSITY = {
         'row_processed': "Processed row {0}",
         'end_table': "Finished table reading."
     },
-    'it-IT': {
+    'it': {
         'start_table': "Inizio lettura della tabella...",
         'cell_processed': "Cella {0} elaborata",
         'row_processed': "Riga {0} elaborata",
