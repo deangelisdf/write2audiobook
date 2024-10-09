@@ -32,6 +32,21 @@ CHAPTER_KEYWORD= {"it-IT":"CAPITOLO", "en":"CHAPTER"}
 TITLE_TOKENS   = ('Heading 1', 'Title', 'Titolo')
 LIST_ITEM_TOKEN= 'List Paragraph'
 CHAPTER_TOKEN  = 'Heading 2'
+TABLE_VERBOSITY = {
+    'en': {
+        'start_table': "Starting table reading...",
+        'cell_processed': "Processed cell {0}",
+        'row_processed': "Processed row {0}",
+        'end_table': "Finished table reading."
+    },
+    'it': {
+        'start_table': "Inizio lettura della tabella...",
+        'cell_processed': "Cella {0} elaborata",
+        'row_processed': "Riga {0} elaborata",
+        'end_table': "Lettura della tabella completata."
+    }
+}
+
 
 def __get_parent_element(parent: Union[Document, _Cell, _Row]):
     if isinstance(parent, _Document):
@@ -133,7 +148,8 @@ def get_text_from_table(block: Table, language:str) -> str: #pylint: disable=W06
     return text
 
 def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
-                          language:str=LANGUAGE) -> Tuple[str, str]:
+                          language=LANGUAGE, verbose = False) -> Tuple[str, str]:
+
     """Generate an intermediate representation in textual version,
     starting from docx format to pure textual, adding sugar context information.
 
@@ -147,13 +163,42 @@ def get_text_from_chapter(chapter_doc:List[Union[Paragraph, Table]],
     title_str = chapter_doc[0].text
     text = f"{TITLE_KEYWORD[language]}: {title_str}.\n"
     idx_list = 0
+    verbosity_msgs = TABLE_VERBOSITY.get(language, TABLE_VERBOSITY['en'])  
     for block in chapter_doc[1:]:
         if isinstance(block, Paragraph):
             temp_text, idx_list = get_text_from_paragraph(block, language, idx_list)
             text += temp_text
         elif isinstance(block, Table):
-            text += get_text_from_table(block, language)
+            if verbose:
+                log_message = verbosity_msgs['start_table']
+                logger.info(log_message)
+                text += f"{log_message}\n"
+
+            for row_index, row in enumerate(block.rows):
+                row_data = []
+                for cell_index, cell in enumerate(row.cells):
+                    for paragraph in cell.paragraphs:
+                        row_data.append(paragraph.text)
+
+                    if verbose:
+                        cell_message = verbosity_msgs['cell_processed'].format(cell_index)
+                        logger.info(cell_message)
+                        text += f"{cell_message}\n"
+
+                row_text = '\t'.join(row_data)
+                text += f"{row_text}\n"
+                if verbose:
+                    row_message = verbosity_msgs['row_processed'].format(row_index)
+                    logger.info(row_message)
+                    text += f"{row_message}\n"
+
+            if verbose:
+                end_message = verbosity_msgs['end_table']
+                logger.info(end_message)
+                text += f"{end_message}\n"
+
     return text, title_str
+
 
 def main():
     """main function"""
