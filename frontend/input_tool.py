@@ -4,16 +4,25 @@ description: handling of external input
 """
 import sys
 import logging
+import argparse
 import os
 from pathlib import Path
 from typing import Tuple
 
-logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 SUPPORTED_LANGUAGE = ["it", "en"]
 
-def get_sys_input(main_path:str, format_output:str="m4b") -> Tuple[str, str]:
+def get_path(path: str) -> Path:
+    """
+    parses the path to a file given by user input
+    """
+    if not os.path.exists(path):
+        logger.error("file to read %s does not exist", path)
+        sys.exit(1)
+    return Path(path)
+
+def get_sys_input(main_path:str, format_output:str="m4b") -> Tuple[str, str, str]:
     """Get input and output path files.
 
     Arguments:
@@ -24,13 +33,26 @@ def get_sys_input(main_path:str, format_output:str="m4b") -> Tuple[str, str]:
         A tuple of the file supplied by the user at the 
         command-line and the path the result file is saved to.
     """
-    if len(sys.argv) != 3:
-        logger.error("Usage: %s <input.docx> <language>",sys.argv[0])
-        sys.exit(1)
-    input_file_path  = sys.argv[1]
-    language         = sys.argv[2]
-    output_file_name = Path(input_file_path).stem
+    argparser = argparse.ArgumentParser(
+            usage='usage: %(prog)s <input.docx> <language>',
+            prog=sys.argv[0])
+    argparser.add_argument('file',
+            default=None,
+            help='file to be read',
+            type=get_path)
+    argparser.add_argument('language',
+            nargs='?', default="it",
+            choices=SUPPORTED_LANGUAGE,
+            help='language used by TTS backend')
+    argparser.add_argument('--verbose',
+            action='store_true', dest='verbose',
+            help=('DEBUG mode.'))
+    args = argparser.parse_args()
+    output_file_name = args.file.stem
     output_file_path = os.path.join(main_path,
                                     output_file_name) + f".{format_output}"
-    assert language in SUPPORTED_LANGUAGE
-    return input_file_path, output_file_path, language
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    logger.debug("%s: read %s language: %s", sys.argv[0],
+                 args.file, args.language)
+    return args.file, output_file_path, args.language

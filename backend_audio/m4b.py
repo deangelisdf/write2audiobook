@@ -16,7 +16,7 @@ LANGUAGE_DICT = {"it":"it"}
 LANGUAGE_DICT_PYTTS = {"it":"italian", "en":"default"}
 voice_edge = "" #pylint: disable=C0103
 
-BIT_RATE_HUMAN = 40
+BIT_RATE_HUMAN = "40k"
 
 engine_ptts = None #pylint: disable=C0103
 loop = None #pylint: disable=C0103
@@ -152,15 +152,23 @@ def __sub_audio(audio_generator:Callable[[str, str], bool],
             out = ffmpeg.output(dummy_concat, output_path_mp3, f='mp3')
             out.run()
 
-def generate_m4b(output_path: str, chapter_paths: List[str], ffmetadata: str) -> None:
+def generate_m4b(output_path: str, chapter_paths: List[str],
+                 ffmetadata: str, pause_duration:int=0) -> None:
     """Generate the final audiobook starting from MP3s and METADATAs.
     
     Arguments:
         output_path: The path to save the final audiobook.
         chapter_paths: The paths where each chapter was saved.
         ffmetadata: The ffmetadata file content.
+        pause_duration: the time pass between chapters, by default no pause
     """
-    inputs_mp3 = [ffmpeg.input(cp) for cp in chapter_paths]
+    silence = None
+    if pause_duration > 0:
+        silence = ffmpeg.input('anullsrc=channel_layout=stereo:sample_rate=44100',
+                               f='lavfi', t=pause_duration).audio
+    inputs_mp3 = [seg for cp in chapter_paths[:-1]
+                      for seg in (ffmpeg.input(cp).audio, silence)] + [ffmpeg.input(chapter_paths[-1]).audio]
+    inputs_mp3 = list(filter(lambda x: x is not None, inputs_mp3))
     joined = ffmpeg.concat(*inputs_mp3, v=0, a=1)
     # Build FFmpeg command for setting metadata
     out = ffmpeg.output(joined, output_path, f='mp4', map_metadata=0, audio_bitrate=BIT_RATE_HUMAN)
@@ -188,9 +196,11 @@ def init(backend:str) -> None:
         engine_ptts = pyttsx3.init()
         engine_ptts.setProperty('volume',1.0)    # setting up volume level  between 0 and 1
     elif backend == "EDGE_TTS":
+        #assert os.
         asyncio.set_event_loop(asyncio.ProactorEventLoop())
         loop = asyncio.get_event_loop_policy().get_event_loop()
         voices = loop.run_until_complete(get_voices_edge_tts(lang="it"))
+        assert isinstance(voices, list) and len(voices) > 0, "Please check you internet connection"
         voice_edge = voices[0]["Name"]
 
 def generate_audio(text_in:str, out_mp3_path:str, *,
@@ -223,3 +233,22 @@ def close_edge_tts() -> None:
     global loop #pylint: disable=W0603,W0602
     if loop:
         loop.close()
+
+def add_cover_to_audiobook(audio_path: str, cover_path: str, output_path: str) -> None:
+    import subprocess
+    command = [
+        'ffmpeg',
+        '-i', audio_path,
+        '-i', cover_path,
+        '-map', '0',
+        '-map', '1',
+        '-c:a', 'copy',
+        '-c:v', 'mjpeg',
+        '-disposition:v:0', 'attached_pic',
+        '-vtag', 'avc1',
+        output_path
+    ]
+    subprocess.run(command, check=True)
+
+if __name__ == "__main__":
+    add_cover_to_audiobook("../Don Giovanni.m4b", "../cover.jpg", "out.m4b")

@@ -23,8 +23,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BACK_END_TTS = m4b.get_back_end_tts()
+SKIP_IDREF = ["coverpage",
+              "frontespizio",
+              "footnotes",
+              "copyright"]
 
-def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
+def extract_by_epub(epub_path: str, directory_to_extract_path: str) -> None:
     """Unzip the epub file and extract all in a temp directory.
 
     Arguments:
@@ -35,7 +39,7 @@ def extract_by_epub(epub_path:str, directory_to_extract_path:str) -> None:
     with zipfile.ZipFile(epub_path, 'r') as zip_ref:
         zip_ref.extractall(directory_to_extract_path)
 
-def get_guide_epub(root_tree: etree.ElementBase) -> Dict[str,str]:
+def get_guide_epub(root_tree: etree.ElementBase) -> Dict[str, str]:
     """Get information about the guide information, described in content.opf file.
 
     Arguments:
@@ -51,7 +55,7 @@ def get_guide_epub(root_tree: etree.ElementBase) -> Dict[str,str]:
         guide_res[reference.attrib['type']] = reference.attrib['href']
     return guide_res
 
-def prepocess_text(text_in:str) -> str:
+def prepocess_text(text_in: str) -> str:
     """Remove possibly non-audible characters.
 
     Arguments:
@@ -66,9 +70,9 @@ def prepocess_text(text_in:str) -> str:
     text_out = text_out.replace('\r\n', '\n')
     return text_out.strip()
 
-def get_text_from_chapter(root_tree:etree._ElementTree,
-                          idref_ch :str, content_dir_path:str,
-                          guide_manifest:Dict[str,str]) -> Tuple[str, Dict[str,str]]:
+def get_text_from_chapter(root_tree: etree._ElementTree,
+                          idref_ch : str, content_dir_path: str,
+                          guide_manifest: Dict[str,str]) -> Tuple[str, Dict[str,str]]:
     """Starting from content.opf xml tree, extract chapter html path
        and parse it to achieve the chapter.
   
@@ -82,10 +86,10 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
         A tuple of the chapter's text and an empty dictionary.
     """
     text_result = ""
-    for href in root_tree.xpath( f"//*[local-name()='package']"
-                            f"/*[local-name()='manifest']"
-                            f"/*[local-name()='item'][@id='{idref_ch}']"
-                            f"/@href"):
+    for href in root_tree.xpath(f"//*[local-name()='package']"
+                                f"/*[local-name()='manifest']"
+                                f"/*[local-name()='item'][@id='{idref_ch}']"
+                                f"/@href"):
         if href in guide_manifest.values():
             #Skip the chapter used as guide
             logging.debug("skipping %s", href)
@@ -93,12 +97,10 @@ def get_text_from_chapter(root_tree:etree._ElementTree,
         xhtml_file_path = os.path.join(content_dir_path, href)
         subtree = etree.parse(xhtml_file_path, etree.HTMLParser())
         for ptag in subtree.xpath("//html/body/*"):
-            for text in ptag.itertext():
-                text_result += text
-            text_result += "\n"
+            text_result += '\n'.join(text for text in ptag.itertext())
     return text_result, {}
 
-def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
+def get_metadata(root_tree: etree._ElementTree) -> Dict[str,str]:
     """Extract basic metadata, as title, author and copyrights infos from content.opf.
 
     Arguments:
@@ -126,7 +128,7 @@ def get_metadata(root_tree:etree._ElementTree) -> Dict[str,str]:
         metadata_result["description"] = descr[0].text
     return metadata_result
 
-def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=R0913,R0917
+def extract_chapter_and_generate_mp3(tree: etree._ElementTree,  #pylint: disable=R0913,R0917
                                      output_file_path:str,
                                      mp3_temp_dir:str,
                                      content_file_dir_path:str,
@@ -157,6 +159,9 @@ def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=
                                                 content_file_dir_path,
                                                 guide)
         logger.info("idref %s", idref)
+        if any(idref.lower() in skippable for skippable in SKIP_IDREF):
+            logger.debug("skip idref %s", idref)
+            continue
         text_chapther = prepocess_text(text_chapther)
         with open(output_debug_path, "w", encoding="UTF-16") as out_debug_file:
             out_debug_file.write(text_chapther)
@@ -167,8 +172,9 @@ def extract_chapter_and_generate_mp3(tree:etree._ElementTree,  #pylint: disable=
 
 def main():
     """main function"""
-    in_file_path, out_file_path, language = input_tool.get_sys_input(os.path.dirname(__file__))
-    chapters = []
+    tool_path: str = os.path.dirname(__file__)
+    in_file_path, out_file_path, language = input_tool.get_sys_input(tool_path)
+    chapters: List[str] = []
 
     m4b.init(BACK_END_TTS)
     with tempfile.TemporaryDirectory() as tmp_dir:
